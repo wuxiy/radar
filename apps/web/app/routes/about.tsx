@@ -1,3 +1,4 @@
+import { industryPath } from "@aihot/industry/paths";
 import { Fragment, useCallback, useMemo, useRef, useState, type ReactNode } from "react";
 import { IntentLink } from "../components/ui/IntentLink";
 import { Link, useLoaderData } from "react-router";
@@ -118,13 +119,13 @@ function stagesOf(stats: SiteStats | null): Stage[] {
 function MakerFace({ src }: { src: string }) {
   const [failed, setFailed] = useState(false);
   if (failed) return null;
-  return <img src={src} alt={`${ABOUT.maker?.name ?? ""}的头像`} width={48} height={48} onError={() => setFailed(true)} className="size-11 shrink-0 rounded-full bg-bg-sunk object-cover ring-1 ring-line xl:size-12" />;
+  return <img src={industryPath(src)} alt={`${ABOUT.maker?.name ?? ""}的头像`} width={48} height={48} onError={() => setFailed(true)} className="size-11 shrink-0 rounded-full bg-bg-sunk object-cover ring-1 ring-line xl:size-12" />;
 }
 
 function QrCard({ src, kind, title, note }: { src: string; kind: string; title: string; note: string }) {
   return (
     <figure className="card flex items-center gap-5 p-5">
-      <img src={src} alt={`${kind}二维码`} width={112} height={112} loading="lazy" className="size-[104px] shrink-0 rounded-tile border border-line bg-white object-contain p-1.5 sm:size-[112px]" />
+      <img src={industryPath(src)} alt={`${kind}二维码`} width={112} height={112} loading="lazy" className="size-[104px] shrink-0 rounded-tile border border-line bg-white object-contain p-1.5 sm:size-[112px]" />
       <figcaption className="min-w-0">
         <div className="text-[12px] text-ink-4">{kind}</div>
         <div className="mt-1 text-[16px] font-semibold leading-snug text-ink">{title}</div>

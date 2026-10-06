@@ -1,3 +1,4 @@
+import { industryPath } from "@aihot/industry/paths";
 import type { ReactNode } from "react";
 import { Link } from "react-router";
 import type { CopyDocument, RenderedCopy } from "../../lib/markdown";
@@ -28,7 +29,7 @@ export function CopyPage({ doc, rendered, eyebrow, footer, aside }: { doc: CopyD
         <ol className="-ml-px space-y-0.5 border-l border-line">
           {rendered.outline.map((o) => (
             <li key={o.id}>
-              <a href={`#${o.id}`} className="-ml-px block border-l border-transparent py-1 pl-3 text-[12.5px] leading-snug text-ink-3 transition-colors hover:border-accent hover:text-ink">
+              <a href={industryPath(`#${o.id}`)} className="-ml-px block border-l border-transparent py-1 pl-3 text-[12.5px] leading-snug text-ink-3 transition-colors hover:border-accent hover:text-ink">
                 {o.text}
               </a>
             </li>

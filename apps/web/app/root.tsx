@@ -1,3 +1,6 @@
+import { IndustrySwitch } from "./components/shell/IndustrySwitch";
+import { PROFILE } from "@aihot/industry/profile";
+import { industryPath } from "@aihot/industry/paths";
 import {
   isRouteErrorResponse, Link, Links, Meta, Outlet, Scripts, ScrollRestoration, useLoaderData, useLocation, useNavigation, useRouteError, useRouteLoaderData,
   type ShouldRevalidateFunction,
@@ -22,11 +25,11 @@ import { titled } from "./lib/seo";
 import { webModules } from "./site-modules";
 
 export const links: Route.LinksFunction = () => [
-  { rel: "icon", href: "/favicon.ico", sizes: "any" },
-  { rel: "icon", type: "image/png", href: "/icon.png" },
-  { rel: "apple-touch-icon", href: "/apple-icon.png" },
-  { rel: "manifest", href: "/manifest.webmanifest" },
-  { rel: "alternate", type: "application/rss+xml", title: `${SITE.name} — 精选`, href: "/feed.xml" },
+  { rel: "icon", href: industryPath("/favicon.ico"), sizes: "any" },
+  { rel: "icon", type: "image/png", href: industryPath("/icon.png") },
+  { rel: "apple-touch-icon", href: industryPath("/apple-icon.png") },
+  { rel: "manifest", href: industryPath("/manifest.webmanifest") },
+  { rel: "alternate", type: "application/rss+xml", title: `${SITE.name} — 精选`, href: industryPath("/feed.xml") },
 ];
 
 /** The release rendering this document: once a newer one is deployed, a render error reloads the page (entry.client). */
@@ -96,6 +99,7 @@ function SiteShell({ changelogVersion, children }: { changelogVersion: string | 
       <main id="main" className="min-w-0 flex-1 pb-[calc(72px+env(safe-area-inset-bottom))] lg:px-7 lg:pb-[72px] lg:pt-6">
         <div className="mx-auto w-full max-w-[640px] pl-[var(--gutter-l)] pr-[var(--gutter-r)] lg:max-w-[var(--page-max-wide)] lg:px-0">
           {webModules().map((m) => m.root?.Top && <m.root.Top key={m.name} />)}
+          {PROFILE.basePath && <div className="flex justify-end py-2 lg:hidden"><IndustrySwitch /></div>}
           {children}
         </div>
       </main>

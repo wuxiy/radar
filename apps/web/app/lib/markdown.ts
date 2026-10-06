@@ -1,5 +1,6 @@
 // Minimal Markdown → HTML for our own static site copy (legal pages, about, agent guide).
 // Trusted input only: never used for third-party content.
+import { industryPath } from "@aihot/industry/paths";
 
 function esc(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -14,7 +15,7 @@ function inline(s: string, site: string): string {
     const own = href === site || href.startsWith(`${site}/`);
     const external = /^https?:\/\//.test(href) && !own;
     const h = own ? href.slice(site.length) || "/" : href;
-    return `<a href="${h}"${external ? ' target="_blank" rel="noopener noreferrer"' : ""}>${text}</a>`;
+    return `<a href="${industryPath(h)}"${external ? ' target="_blank" rel="noopener noreferrer"' : ""}>${text}</a>`;
   });
   // Bare URLs.
   out = out.replace(/(^|[\s（(])((?:https?:\/\/)[^\s<）)]+)/g, (_m, pre: string, url: string) => `${pre}<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`);

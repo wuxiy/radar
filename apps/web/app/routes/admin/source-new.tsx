@@ -1,3 +1,4 @@
+import { industryPath } from "@aihot/industry/paths";
 import { SITE, SOURCE_DEFAULTS } from "@aihot/site";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router";
@@ -142,7 +143,7 @@ export default function NewSource() {
             <ul className="space-y-3">
               {preview.items.map((i) => (
                 <li key={i.url} className="text-[13px]">
-                  <a href={i.url} target="_blank" rel="noreferrer" className="font-medium text-ink hover:text-accent">{i.title}</a>
+                  <a href={industryPath(i.url)} target="_blank" rel="noreferrer" className="font-medium text-ink hover:text-accent">{i.title}</a>
                   <div className="text-[12px] text-ink-4">{i.publishedAt ? bj(i.publishedAt, true) : "无发布时间"}</div>
                   {i.excerpt && <div className="mt-0.5 line-clamp-2 text-[12.5px] text-ink-3">{i.excerpt}</div>}
                 </li>

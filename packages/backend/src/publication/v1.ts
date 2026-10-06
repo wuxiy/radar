@@ -178,6 +178,7 @@ export async function selectedSnapshot(q: SnapshotQuery, now = new Date()) {
       ORDER BY article_id, seq DESC
     ) latest
     JOIN selected_state st ON st.article_id = latest.article_id AND st.in_set
+    JOIN publications p ON p.article_id = latest.article_id AND ${seatedCondition(now)}
     WHERE latest.op = 'upsert'
     ORDER BY latest.article_id
     LIMIT ${q.limit + 1}`;

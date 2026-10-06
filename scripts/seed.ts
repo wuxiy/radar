@@ -1,3 +1,4 @@
+import { PROFILE } from "@aihot/industry/profile";
 // Seeds a fresh site from the industry pack: the demo sources (industry/sources.json, only the ones not
 // there yet, so admin edits are never undone). Topics need no seeding: they are read from industry/topics.json.
 // Re-runnable:  node --env-file=.env scripts/seed.ts
@@ -22,7 +23,7 @@ interface SeedSource {
   enabled?: boolean;
 }
 
-const { sources } = JSON.parse(readFileSync(path.join(REPO_ROOT, "industry/sources.json"), "utf8")) as { sources: SeedSource[] };
+const { sources } = JSON.parse(readFileSync(path.join(REPO_ROOT, PROFILE.directory, "sources.json"), "utf8")) as { sources: SeedSource[] };
 let added = 0;
 for (const s of sources) {
   assertSupportedConfig(s.kind, s.config);

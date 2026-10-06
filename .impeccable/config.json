@@ -1,0 +1,26 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "broken-image",
+        "value": "*",
+        "files": [
+          "packages/backend/src/media/imgproxy.ts"
+        ],
+        "createdAt": "2026-10-02T16:07:27.219Z",
+        "reason": "Agent: backend HTML regex and dynamic template; proxiedImage supplies the image URL at runtime"
+      },
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "apps/web/app/app.css"
+        ],
+        "createdAt": "2026-10-02T17:09:32.501Z",
+        "reason": "Agent: the only finding is the semantic .prose blockquote quotation marker, using neutral --line-strong (#d1d9d5 in light mode and rgba white 0.12 in dark mode); preserve the existing reading style"
+      }
+    ]
+  }
+}

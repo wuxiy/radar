@@ -1,3 +1,4 @@
+import { industryPath } from "@aihot/industry/paths";
 // One report with a newspaper's structure in the site's own look: a nameplate with its 报眼 (the box
 // beside it for the issue and date), a band of the issue's figures, the front page (the lead, today's
 // highlights and the page index), then one page per section in two columns, the neighbouring issues
@@ -94,7 +95,7 @@ function Source({ c, size = 16 }: { c: ReportCitation; size?: number }) {
  */
 function Original({ c, className = "" }: { c: ReportCitation; className?: string }) {
   return (
-    <a href={c.sourceUrl} target="_blank" rel="noopener noreferrer" aria-label={`阅读${c.sourceName}原文：${c.title}（新标签页）`} className={`${LINK} text-[12.5px] text-ink-3 ${className}`}>
+    <a href={industryPath(c.sourceUrl)} target="_blank" rel="noopener noreferrer" aria-label={`阅读${c.sourceName}原文：${c.title}（新标签页）`} className={`${LINK} text-[12.5px] text-ink-3 ${className}`}>
       原文 <IconArrowUpRight size={12} />
     </a>
   );
@@ -239,7 +240,7 @@ function LeadPicture({ cover, onError, priority = false, className = "" }: { cov
   return (
     <figure className={className}>
       <div className="overflow-hidden well rounded-panel" style={{ aspectRatio: shown }}>
-        <img src={cover.url} srcSet={cover.srcSet}
+        <img src={industryPath(cover.url)} srcSet={cover.srcSet}
           sizes={priority ? "(min-width: 1700px) 780px, (min-width: 1580px) calc(100vw - 920px), (min-width: 1420px) calc(100vw - 880px), (min-width: 1024px) calc(100vw - 540px), (min-width: 640px) 608px, calc(100vw - 32px)" : "auto, (min-width: 1180px) 300px, (min-width: 640px) 608px, calc(100vw - 32px)"}
           width={cover.width ?? undefined} height={cover.height ?? undefined}
           alt="" loading={priority ? "eager" : "lazy"} fetchPriority={priority ? "high" : "auto"} decoding="async" onError={onError} className="size-full object-cover" />

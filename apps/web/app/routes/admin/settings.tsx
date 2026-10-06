@@ -1,3 +1,4 @@
+import { industryPath } from "@aihot/industry/paths";
 import { ADMIN, SITE } from "@aihot/site";
 import { useRef, useState } from "react";
 import type { Route } from "./+types/settings";
@@ -20,7 +21,7 @@ function QrSlot({ slot, label, src }: { slot: "wechatQr" | "feishuQr"; label: st
   const input = useRef<HTMLInputElement>(null);
   return (
     <div className="flex items-center gap-4">
-      {src ? <img src={src} alt={label} className="size-28 rounded-card bg-white object-contain p-1.5 ring-1 ring-line" /> : <div className="flex size-28 shrink-0 items-center justify-center rounded-card bg-surface text-sm text-ink-4 ring-1 ring-line">未设置</div>}
+      {src ? <img src={industryPath(src)} alt={label} className="size-28 rounded-card bg-white object-contain p-1.5 ring-1 ring-line" /> : <div className="flex size-28 shrink-0 items-center justify-center rounded-card bg-surface text-sm text-ink-4 ring-1 ring-line">未设置</div>}
       <div>
         <div className="text-[14px] font-medium text-ink">{label}</div>
         <div className="mt-0.5 break-all font-mono text-[11.5px] text-ink-4">{src}</div>

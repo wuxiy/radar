@@ -1,5 +1,7 @@
 # 部署
 
+> Radar 的 AI + 医疗双行业使用 [双行业运行说明](radar/run.md) 和 `docker-compose.radar.yml`。下文保留原单行业部署方式，不能替代双行业验收。
+
 ## 用 Docker（推荐）
 
 需要一台装了 Docker（带 Compose）的机器。云服务器建议至少 2 核、4 GB 内存，构建镜像时要用到。

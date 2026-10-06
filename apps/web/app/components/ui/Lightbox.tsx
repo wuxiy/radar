@@ -1,3 +1,4 @@
+import { industryPath } from "@aihot/industry/paths";
 import { useRef } from "react";
 import { createPortal } from "react-dom";
 import { Presence } from "./Presence";
@@ -115,7 +116,7 @@ export function Lightbox({ images, index, onIndex, onClose }: { images: Lightbox
         className="fixed inset-0 z-[80] grid cursor-zoom-out touch-pinch-zoom place-items-center bg-black/85 p-4 sm:p-10"
       >
         {current && (
-          <img ref={img} key={current.src} src={current.src} decoding="async" alt={current.alt ?? ""} className="lightbox-img anim-zoom-in min-h-0 min-w-0 max-h-[calc(100dvh-5rem)] max-w-full rounded-control object-contain shadow-2xl" />
+          <img ref={img} key={current.src} src={industryPath(current.src)} decoding="async" alt={current.alt ?? ""} className="lightbox-img anim-zoom-in min-h-0 min-w-0 max-h-[calc(100dvh-5rem)] max-w-full rounded-control object-contain shadow-2xl" />
         )}
         <button ref={closeButton} type="button" aria-label="关闭" onClick={(e) => { e.stopPropagation(); onClose(); }} className="absolute right-[max(16px,env(safe-area-inset-right))] top-[max(16px,env(safe-area-inset-top))] grid size-11 place-items-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20">
           <IconClose size={18} />

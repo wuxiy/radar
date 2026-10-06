@@ -1,3 +1,4 @@
+import { industryPath } from "@aihot/industry/paths";
 import { useState } from "react";
 import type { MediaView } from "@aihot/contracts/site";
 import { Lightbox } from "../../components/ui/Lightbox";
@@ -31,7 +32,7 @@ export function MediaGallery({ media, postUrl }: { media: MediaView[]; postUrl: 
         {shown.map((m) => {
           const img = (
             <img
-              src={m.poster ?? m.url}
+              src={industryPath(m.poster ?? m.url)}
               srcSet={m.srcSet}
               sizes={single ? "auto, (min-width: 460px) 420px, calc(100vw - 32px)" : "auto, (min-width: 800px) 248px, (min-width: 640px) calc(33.333vw - 19px), calc(50vw - 24px)"}
               width={m.width ?? undefined}
@@ -44,7 +45,7 @@ export function MediaGallery({ media, postUrl }: { media: MediaView[]; postUrl: 
             />
           );
           return m.kind === "video" ? (
-            <a key={m.url} href={postUrl} target="_blank" rel="noopener noreferrer" aria-label="打开原推播放视频" className={tile}>
+            <a key={m.url} href={industryPath(postUrl)} target="_blank" rel="noopener noreferrer" aria-label="打开原推播放视频" className={tile}>
               {img}
               <PlayMark />
             </a>

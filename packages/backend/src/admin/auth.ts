@@ -1,14 +1,17 @@
 // Admin identity: the admin password (ADMIN_PASSWORD), or optionally Feishu OAuth with an allowlist of
-// union_ids / emails; opaque sessions stored hashed, and an audit trail for every manual change.
+// union_ids / emails, or native OIDC with an explicit administrator mapping; opaque sessions stored hashed.
 // Development may impersonate an admin with DEV_AUTH_ROLE=admin; production refuses to start with it.
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { audit } from "../audit.ts";
 import { config, credential } from "../config.ts";
-import { sql } from "../db.ts";
+import { sql, type Db } from "../db.ts";
+import { oidcClaimsAuthorized, oidcSettings, OidcRejected, type OidcClaims } from "./oidc.ts";
 import { sha256 } from "../lib/ids.ts";
+import { PROFILE } from "@aihot/industry/profile";
+import { localPath } from "@aihot/industry/paths";
 
-export const SESSION_COOKIE = "aihot_admin";
-export const STATE_COOKIE = "aihot_oauth_state";
+export const SESSION_COOKIE = PROFILE.basePath ? `radar_${PROFILE.id}_admin` : "aihot_admin";
+export const STATE_COOKIE = PROFILE.basePath ? `radar_${PROFILE.id}_oauth_state` : "aihot_oauth_state";
 export const SESSION_DAYS = 30;
 /** Register this callback in the Feishu open platform when Feishu sign-in is used. */
 export const CALLBACK_URL = `${config.siteUrl}/api/auth/callback`;
@@ -38,9 +41,9 @@ interface FeishuClaims {
 }
 
 interface SessionAuth {
-  method: "password" | "feishu";
+  method: "password" | "feishu" | "oidc";
   binding: string;
-  claims: FeishuClaims | null;
+  claims: FeishuClaims | OidcClaims | null;
 }
 
 function sessionBinding(method: SessionAuth["method"], identity: unknown, key: string): string {
@@ -55,7 +58,7 @@ function validClaims(value: unknown): value is FeishuClaims {
     (c.email === null || (typeof c.email === "string" && c.email.length > 0 && c.email === c.email.toLowerCase()));
 }
 
-function sessionAuthorized(row: { auth_method: string | null; auth_binding: string | null; auth_claims: unknown }): boolean {
+function sessionAuthorized(row: { user_id: number; auth_method: string | null; auth_binding: string | null; auth_claims: unknown }): boolean {
   const key = credential("auth", "SESSION_SECRET");
   if (!key || !row.auth_binding || !/^[0-9a-f]{64}$/.test(row.auth_binding)) return false;
   let binding: string;
@@ -68,6 +71,9 @@ function sessionAuthorized(row: { auth_method: string | null; auth_binding: stri
     if (!(c.unionId && config.adminUnionIds.includes(c.unionId)) && !(c.email && config.adminEmails.includes(c.email))) return false;
     // jsonb does not keep key order: rebuild the claims in their sign-in order, never from mutable profile data.
     binding = sessionBinding("feishu", { appId: c.appId, unionId: c.unionId, email: c.email }, key);
+  } else if (row.auth_method === "oidc") {
+    if (!oidcClaimsAuthorized(row.auth_claims, row.user_id)) return false;
+    binding = oidcBinding(row.auth_claims, key);
   } else return false;
   return timingSafeEqual(Buffer.from(binding, "hex"), Buffer.from(row.auth_binding, "hex"));
 }
@@ -101,7 +107,7 @@ export function parseCookies(header: string | undefined): Record<string, string>
 }
 
 export function cookie(name: string, value: string, maxAgeSeconds: number, secure: boolean): string {
-  return `${name}=${encodeURIComponent(value)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAgeSeconds}${secure ? "; Secure" : ""}`;
+  return `${name}=${encodeURIComponent(value)}; Path=${PROFILE.basePath || "/"}; HttpOnly; SameSite=Lax; Max-Age=${maxAgeSeconds}${secure ? "; Secure" : ""}`;
 }
 
 /** Where to send the browser to sign in; the signed state also carries where to return. */
@@ -125,6 +131,7 @@ export function safeReturn(target: string): string {
       return "/admin";
     }
   }
+  path = localPath(path);
   return /^\/admin(\/|\?|$)/.test(path) && !path.startsWith("//") ? path : "/admin";
 }
 
@@ -165,11 +172,11 @@ async function feishuUser(code: string): Promise<{ user: FeishuUser; appId: stri
 
 export class LoginRejected extends Error {}
 
-async function createSession(userId: number, userAgent: string | undefined, auth: SessionAuth): Promise<string> {
+async function createSession(userId: number, userAgent: string | undefined, auth: SessionAuth, db: Db = sql): Promise<string> {
   const token = randomBytes(32).toString("base64url");
-  await sql`INSERT INTO admin_sessions (id_hash, user_id, csrf_token, expires_at, user_agent, auth_method, auth_binding, auth_claims)
+  await db`INSERT INTO admin_sessions (id_hash, user_id, csrf_token, expires_at, user_agent, auth_method, auth_binding, auth_claims)
             VALUES (${sha256(token)}, ${userId}, ${randomBytes(18).toString("base64url")}, ${new Date(Date.now() + SESSION_DAYS * 86400_000)}, ${userAgent?.slice(0, 300) ?? null},
-                    ${auth.method}, ${auth.binding}, ${auth.claims ? sql.json(auth.claims as never) : null})`;
+                    ${auth.method}, ${auth.binding}, ${auth.claims ? db.json(auth.claims as never) : null})`;
   return token;
 }
 
@@ -202,6 +209,25 @@ export async function completeLogin(code: string, state: string, stateCookie: st
 
 /** The single password admin: one row, found by its reserved address. */
 const PASSWORD_ADMIN = "admin@local";
+
+function oidcBinding(claims: OidcClaims, key: string): string {
+  return sessionBinding("oidc", { issuer: claims.issuer, subject: claims.subject, clientId: claims.clientId, userId: claims.userId,
+    clientSecret: oidcSettings!.clientSecret }, key);
+}
+
+/** The OIDC flow verifies the token first. Only the configured, already existing administrator is used. */
+export async function oidcLogin(claims: OidcClaims, returnTo: string, userAgent: string | undefined) {
+  if (!oidcClaimsAuthorized(claims, claims.userId)) throw new OidcRejected();
+  const auth: SessionAuth = { method: "oidc", claims, binding: oidcBinding(claims, secret()) };
+  const token = await sql.begin(async db => {
+    const users = await db`UPDATE admin_users SET last_login_at=now() WHERE id=${claims.userId} RETURNING id`;
+    if (users.length !== 1) throw new OidcRejected();
+    const token = await createSession(claims.userId, userAgent, auth, db);
+    await audit(`admin:${claims.userId}`, "auth.login", null, null, null, { method: "oidc" }, { db });
+    return token;
+  });
+  return { token, returnTo: safeReturn(returnTo), userId: claims.userId };
+}
 
 /** Password sign-in: a constant-time comparison of digests, so the length leaks nothing either. */
 export async function passwordLogin(password: string, returnTo: string, userAgent: string | undefined) {

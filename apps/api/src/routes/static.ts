@@ -1,3 +1,4 @@
+import { PROFILE } from "@aihot/industry/profile";
 // Discovery and static files: sitemap, llms.txt, the site's public files (robots.txt, security.txt, the web
 // manifest, the OpenAPI document), icons, the IndexNow key and the about page's contact codes.
 import { readFile, stat } from "node:fs/promises";
@@ -15,7 +16,7 @@ import { loadContact } from "@aihot/backend/site/contact";
 
 const PUBLIC = path.join(REPO_ROOT, "site/public");
 /** The site's brand files (site/brand/), and how long its icons are cached. */
-const BRAND = path.join(REPO_ROOT, "site/brand");
+const BRAND = path.join(REPO_ROOT, PROFILE.brandDirectory);
 const ICON_CACHE = "public, max-age=2592000, stale-while-revalidate=604800";
 
 const TYPES: Record<string, string> = {
@@ -38,6 +39,7 @@ const TYPES: Record<string, string> = {
 function fillPlaceholders(text: string, json: boolean): string {
   const values: Record<string, string> = {
     siteName: SITE.name,
+    basePath: PROFILE.basePath,
     siteUrl: config.siteUrl,
     description: SITE.description,
     tagline: SITE.tagline,

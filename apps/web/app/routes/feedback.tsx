@@ -1,3 +1,4 @@
+import { industryPath } from "@aihot/industry/paths";
 import { useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import { SITE } from "@aihot/site";
@@ -146,7 +147,7 @@ export default function FeedbackPage() {
       form.set("email", draft.email);
       form.set("pageUrl", draft.pageUrl);
       if (shot) form.set("screenshot", shot.file);
-      const res = await fetch("/api/site/feedback", { method: "POST", body: form });
+      const res = await fetch(industryPath("/api/site/feedback"), { method: "POST", body: form });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) return setState({ kind: "error", message: body.detail ?? "提交失败，请稍后再试。" });
       writeDraft(null);

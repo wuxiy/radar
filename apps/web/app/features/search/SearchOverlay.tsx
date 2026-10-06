@@ -1,3 +1,4 @@
+import { industryPath } from "@aihot/industry/paths";
 // Phone search: opens over the page from the bars' magnifier with the keyboard
 // already up — the field is focused inside the same tap, which iOS requires — and searches 全部动态
 // (/all?q=…). Below the field: this browser's recent searches, topics to browse and what is hot now.
@@ -40,7 +41,7 @@ let suggestions: Promise<SearchSuggestions> | null = null;
 
 /** Share only an ongoing read; the HTTP cache owns freshness and failed reads can be retried. */
 function loadSuggestions() {
-  suggestions ??= fetch('/api/site/search/suggestions')
+  suggestions ??= fetch(industryPath('/api/site/search/suggestions'))
     .then(r => { if (!r.ok) throw new Error(String(r.status)); return r.json() as Promise<SearchSuggestions>; })
     .finally(() => { suggestions = null; });
   return suggestions;

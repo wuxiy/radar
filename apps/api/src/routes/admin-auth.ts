@@ -1,3 +1,4 @@
+import { industryPath } from "@aihot/industry/paths";
 // Admin sign-in and the /api/admin guard. Public routes never read the session.
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { ZodError } from "zod";
@@ -13,6 +14,7 @@ import {
   loginRedirect,
   parseCookies,
   passwordLogin,
+  oidcLogin,
   safeReturn,
   SESSION_COOKIE,
   SESSION_DAYS,
@@ -20,6 +22,7 @@ import {
   STATE_COOKIE,
   type AdminPrincipal,
 } from "@aihot/backend/admin/auth";
+import { OIDC_COOKIE, OIDC_TTL_SECONDS, oidcFlow, OidcUnavailable } from "@aihot/backend/admin/oidc";
 import { sendProblem } from "../http/respond.ts";
 
 /** Cookies are Secure whenever the site is served over HTTPS. */
@@ -89,11 +92,41 @@ export function registerAdminAuth(app: FastifyInstance) {
       ?? (DEPLOYMENT.loginReturnHeader ? req.headers[DEPLOYMENT.loginReturnHeader.toLowerCase()] : undefined)
       ?? "/admin",
     );
-    if (feishuLoginConfigured() && !config.adminPassword) return feishuRedirect(reply, returnTo);
+    if (feishuLoginConfigured() && !config.adminPassword && !oidcFlow) return feishuRedirect(reply, returnTo);
     return reply.header("Cache-Control", "no-store").redirect(loginPage(returnTo), 302);
   });
 
-  app.get("/api/auth/options", async (_req, reply) => reply.header("Cache-Control", "no-store").send({ password: !!config.adminPassword, feishu: feishuLoginConfigured() }));
+  app.get("/api/auth/options", async (_req, reply) => reply.header("Cache-Control", "no-store").send({ password: !!config.adminPassword,
+    feishu: feishuLoginConfigured(), oidc: !!oidcFlow, oidcUrl: oidcFlow ? `${config.siteUrl}/api/auth/oidc` : null }));
+
+  app.get("/api/auth/oidc", async (req, reply) => {
+    const returnTo = safeReturn(String((req.query as Record<string, string>).return ?? "/admin"));
+    reply.header("Cache-Control", "no-store").header("Referrer-Policy", "no-referrer");
+    if (!oidcFlow) return reply.redirect(loginPage(returnTo), 302);
+    try {
+      const login = await oidcFlow.start(returnTo);
+      reply.header("Set-Cookie", cookie(OIDC_COOKIE, login.stateCookie, OIDC_TTL_SECONDS, true));
+      return reply.redirect(login.url, 302);
+    } catch {
+      return reply.code(503).header("Retry-After", "30").send({ error: "统一身份中心暂不可用，可使用管理员密码登录。" });
+    }
+  });
+
+  app.get("/api/auth/oidc/callback", async (req, reply) => {
+    reply.header("Cache-Control", "no-store").header("Referrer-Policy", "no-referrer")
+      .header("Set-Cookie", cookie(OIDC_COOKIE, "", 0, true));
+    try {
+      if (!oidcFlow) return reply.code(403).send({ error: "统一登录未启用。" });
+      const verified = await oidcFlow.complete(new URLSearchParams(req.url.split("?")[1] ?? ""), parseCookies(req.headers.cookie)[OIDC_COOKIE]);
+      const login = await oidcLogin(verified.claims, verified.returnTo, req.headers["user-agent"]);
+      reply.header("Set-Cookie", [cookie(SESSION_COOKIE, login.token, SESSION_DAYS * 86400, true), cookie(OIDC_COOKIE, "", 0, true)]);
+      return reply.redirect(login.returnTo, 302);
+    } catch (error) {
+      // Callback parameters and provider errors are credentials: never log or render them.
+      const unavailable = error instanceof OidcUnavailable;
+      return reply.code(unavailable ? 503 : 403).send({ error: unavailable ? "统一身份中心暂不可用，可使用管理员密码登录。" : "统一登录状态无效或账号未获授权，请重新登录。" });
+    }
+  });
 
   // The sign-in form posts as a plain HTML form; only this route reads that format.
   app.register(async (form) => {
@@ -134,7 +167,7 @@ export function registerAdminAuth(app: FastifyInstance) {
     } catch (error) {
       const message = error instanceof LoginRejected ? error.message : "登录失败，请稍后再试";
       if (!(error instanceof LoginRejected)) req.log.error({ err: error }, "admin login failed");
-      return reply.code(403).type("text/html; charset=utf-8").send(`<!doctype html><meta charset="utf-8"><title>登录失败 · ${SITE.name}</title><p style="font:16px system-ui;padding:40px">${message}。<a href="/api/auth/login">重新登录</a></p>`);
+      return reply.code(403).type("text/html; charset=utf-8").send(`<!doctype html><meta charset="utf-8"><title>登录失败 · ${SITE.name}</title><p style="font:16px system-ui;padding:40px">${message}。<a href="${industryPath("/api/auth/login")}">重新登录</a></p>`);
     }
   });
 

@@ -1,3 +1,4 @@
+import { industryPath } from "@aihot/industry/paths";
 // Client-side admin commands: same-origin fetch to /api/admin/* with the session's CSRF token, a
 // stable Idempotency-Key per submitted command, and a revalidation of the page's loaders on success.
 import { useCallback, useRef, useState } from "react";
@@ -35,14 +36,14 @@ export function useAdminAction() {
       keys.current.set(label, key);
       setPending(label);
       try {
-        const res = await fetch(path, {
+        const res = await fetch(industryPath(path), {
           method,
           credentials: "same-origin",
           headers: { "content-type": "application/json", "x-csrf-token": me.csrf, "idempotency-key": key },
           body: body === undefined ? undefined : JSON.stringify(body),
         });
         if (res.status === 401) {
-          window.location.href = `/api/auth/login?return=${encodeURIComponent(window.location.pathname)}`;
+          window.location.href = industryPath(`/api/auth/login?return=${encodeURIComponent(window.location.pathname)}`);
           return null;
         }
         const text = await res.text();

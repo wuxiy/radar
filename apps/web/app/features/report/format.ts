@@ -1,3 +1,4 @@
+import { localPath } from "@aihot/industry/paths";
 // Names, dates and grouping for daily, weekly and monthly reports.
 import type { ReportNavigationEntry, ReportKind } from "@aihot/contracts/site";
 import { beijingDate, beijingWeekday, isoWeekLabel, isoWeekRange } from "@aihot/contracts/time";
@@ -10,6 +11,7 @@ export const KIND_PATH: Record<ReportKind, string> = { daily: "/daily", weekly: 
 export const KIND_LABEL: Record<ReportKind, string> = { daily: "日报", weekly: "周报", monthly: "月报" };
 
 export function kindFromPath(pathname: string): ReportKind {
+  pathname = localPath(pathname);
   if (pathname.startsWith("/weekly")) return "weekly";
   if (pathname.startsWith("/monthly")) return "monthly";
   return "daily";

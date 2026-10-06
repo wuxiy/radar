@@ -40,9 +40,12 @@ test("online migrations permit metadata changes and split constraint validation"
     "ALTER TABLE articles ADD CONSTRAINT owner FOREIGN KEY (source_id) REFERENCES sources(id) NOT VALID;",
     "ALTER TABLE articles ALTER COLUMN flag SET DEFAULT 'pending';",
     "ALTER TABLE articles ALTER COLUMN flag DROP DEFAULT;",
+    "ALTER TABLE admin_sessions DROP CONSTRAINT IF EXISTS admin_sessions_auth_method_check;",
   ]) assert.equal(migrationPlan(statement).kind, "transaction", statement);
   assert.equal(migrationPlan("ALTER TABLE articles VALIDATE CONSTRAINT positive;").kind, "validation");
   assert.throws(() => migrationPlan("ALTER TABLE articles ADD COLUMN flag text; ALTER TABLE articles VALIDATE CONSTRAINT positive;"));
+  assert.throws(() => migrationPlan("ALTER TABLE admin_sessions DROP CONSTRAINT IF EXISTS old_check CASCADE;"));
+  assert.throws(() => migrationPlan("ALTER TABLE admin_sessions DROP CONSTRAINT IF EXISTS old_check, DROP CONSTRAINT IF EXISTS another_check;"));
 });
 
 // Dropping a table nothing uses: a dependent object must stop it (no CASCADE), and one statement may not

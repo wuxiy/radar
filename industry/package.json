@@ -3,6 +3,19 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./*": "./*.ts"
+    "./*": "./*.ts",
+    "./taxonomy": {
+      "medical": "./profiles/medical/taxonomy.ts",
+      "default": "./taxonomy.ts"
+    },
+    "./selection": {
+      "medical": "./profiles/medical/selection.ts",
+      "default": "./selection.ts"
+    },
+    "./profile": {
+      "medical": "./profiles/medical/profile.ts",
+      "radar-ai": "./profiles/ai/profile.ts",
+      "default": "./profile.ts"
+    }
   }
 }

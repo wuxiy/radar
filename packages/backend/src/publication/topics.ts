@@ -1,3 +1,4 @@
+import { PROFILE } from "@aihot/industry/profile";
 // Topics: stable slugs in three groups (companies, directions, content forms), defined by the industry
 // pack (industry/topics.json) and read from there when the process starts. Which reports a topic takes
 // is one SQL predicate, `membership`: a direction or a form takes its tags; a company takes the reports
@@ -50,7 +51,7 @@ function titlePattern(name: string, entityId: string): string {
   return `(?<![A-Za-z])(${[...names].map(escape).join("|")})(?![A-Za-z])`;
 }
 
-const file = JSON.parse(readFileSync(path.join(REPO_ROOT, "industry/topics.json"), "utf8")) as TopicFile;
+const file = JSON.parse(readFileSync(path.join(REPO_ROOT, PROFILE.directory, "topics.json"), "utf8")) as TopicFile;
 
 export const TOPIC_GROUPS: TopicGroup[] = file.groups;
 

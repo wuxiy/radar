@@ -1,3 +1,5 @@
+import { PROFILE } from "@aihot/industry/profile";
+import { SITE } from "@aihot/site";
 // The report nameplates (site/brand/nameplates/, made by scripts/nameplates.ts from the pack's
 // subject word). Each logotype is cached on its own; the two paths take the theme's ink and accent.
 import daily from "@aihot/site/brand/nameplates/daily.svg?url&no-inline";
@@ -14,6 +16,7 @@ const NAMEPLATES = {
 } as const;
 
 export function Nameplate({ which, className = "" }: { which: keyof typeof NAMEPLATES; className?: string }) {
+  if (PROFILE.id === "medical") return <span className={`font-bold tracking-tight ${className}`}>{which === "archive" ? "医疗日报合订本" : `${SITE.subject}${({ daily: "日报", weekly: "周报", monthly: "月报" } as const)[which]}`}</span>;
   const n = NAMEPLATES[which];
   return (
     <svg viewBox={n.viewBox} className={className} aria-hidden="true" focusable="false">

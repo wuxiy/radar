@@ -3,8 +3,11 @@
 // site, an environment variable or the admin's model page picks one of the site's named presets
 // (site/models.ts).
 import type { z } from "zod";
+import { isIP } from "node:net";
+import { Agent, fetch as pinnedFetch, type Response as PinnedResponse } from "undici";
 import { PRESETS } from "@aihot/site/models";
 import { config, credential } from "../config.ts";
+import { defaultModelConfig } from "./model-config.ts";
 import { sha256 } from "../lib/ids.ts";
 import { assertAccepted, paidRequest, ProviderRejectedError, rejectReceivedResponse } from "./receipts.ts";
 
@@ -37,15 +40,30 @@ function reasoningTokensFromEnv(value: string | undefined): number | undefined {
   return Number(value);
 }
 
+const connections = new Map<string, Agent>();
+
+/** Pin the default model's TCP destination while retaining its URL's Host and TLS server name. */
+function defaultConnection(ip: string): Agent | undefined {
+  if (!ip) return undefined;
+  const family = isIP(ip);
+  if (!family) throw new Error("LLM_CONNECT_IP must be an IPv4 or IPv6 address");
+  let agent = connections.get(ip);
+  if (!agent) {
+    agent = new Agent({ connect: { lookup: (_hostname, options, callback) => callback(null, options.all ? [{ address: ip, family }] : ip, family) } });
+    connections.set(ip, agent);
+  }
+  return agent;
+}
+
 export const MODELS: Record<string, ModelSpec> = {
-  // Read from the environment at call time.
+  // Read the shared admin configuration (or environment fallback) at call time.
   default: {
     key: "default", service: "llm", baseUrlEnv: "LLM_BASE_URL", apiKeyEnv: "LLM_API_KEY",
-    get model() { return process.env.LLM_MODEL ?? ""; },
-    get extra() { return extraFromEnv(process.env.LLM_EXTRA_JSON); },
+    get model() { return defaultModelConfig().model; },
+    get extra() { return extraFromEnv(defaultModelConfig().extraJson); },
     get reasoningTokens() { return reasoningTokensFromEnv(process.env.LLM_REASONING_TOKENS); },
-    get jsonMode() { return process.env.LLM_JSON_MODE !== "false"; },
-    get vision() { return process.env.LLM_VISION === "true"; },
+    get jsonMode() { return defaultModelConfig().jsonMode; },
+    get vision() { return defaultModelConfig().vision; },
   },
   // The pack's named presets, each with its own address and key.
   ...Object.fromEntries(Object.entries(PRESETS).map(([key, preset]) => [key, { key, ...preset }])),
@@ -127,12 +145,20 @@ function isConnectFailure(error: unknown): boolean {
 }
 
 export async function chatJson<S extends z.ZodType>(opts: ChatJsonOptions<S>): Promise<ChatJsonResult<z.infer<S>>> {
-  const spec = MODELS[opts.model];
-  if (!spec) throw new Error(`Unknown model ${opts.model}`);
+  const source = MODELS[opts.model];
+  if (!source) throw new Error(`Unknown model ${opts.model}`);
   if (!config.modelCallsEnabled) throw new Error("Model calls are disabled (MODEL_CALLS_ENABLED=false)");
-  const baseUrl = credential("models", spec.baseUrlEnv);
-  const apiKey = credential("models", spec.apiKeyEnv);
+  const defaults = source.key === "default" ? defaultModelConfig() : null;
+  // A live admin change must not relabel the receipt of an already running request.
+  const spec: ModelSpec = defaults ? {
+    key: source.key, service: source.service, baseUrlEnv: source.baseUrlEnv, apiKeyEnv: source.apiKeyEnv,
+    model: defaults.model, extra: extraFromEnv(defaults.extraJson), jsonMode: defaults.jsonMode,
+    vision: defaults.vision, reasoningTokens: source.reasoningTokens,
+  } : source;
+  const baseUrl = defaults ? defaults.baseUrl : credential("models", spec.baseUrlEnv);
+  const apiKey = defaults ? defaults.apiKey : credential("models", spec.apiKeyEnv);
   if (!baseUrl || !apiKey || !spec.model) throw new Error(`Model ${opts.model} is not configured (${spec.baseUrlEnv}, ${spec.apiKeyEnv}${spec.key === "default" ? ", LLM_MODEL" : ""})`);
+  const dispatcher = defaults ? defaultConnection(defaults.connectIp) : undefined;
 
   const temperature = opts.temperature ?? 0.2;
   const maxTokens = Math.max(opts.maxTokens ?? 1500, 512) + (spec.reasoningTokens ?? 0);
@@ -163,14 +189,16 @@ export async function chatJson<S extends z.ZodType>(opts: ChatJsonOptions<S>): P
     },
     async () => {
       const started = Date.now();
-      let res: Response;
+      let res: Response | PinnedResponse;
       try {
-        res = await fetch(`${baseUrl.replace(/\/$/, "")}/chat/completions`, {
+        const request = {
           method: "POST",
           headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}` },
           body: JSON.stringify(body),
           signal: AbortSignal.timeout(opts.timeoutMs ?? 120_000),
-        });
+        };
+        const endpoint = `${baseUrl.replace(/\/$/, "")}/chat/completions`;
+        res = dispatcher ? await pinnedFetch(endpoint, { ...request, dispatcher }) : await fetch(endpoint, request);
       } catch (error) {
         if (isConnectFailure(error)) throw new ProviderRejectedError(`connect failed: ${String(error)}`, null, true);
         throw error;

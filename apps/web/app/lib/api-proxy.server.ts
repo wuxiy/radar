@@ -1,3 +1,4 @@
+import { industryPath } from "@aihot/industry/paths";
 // Passes an api-owned request to the api process and streams the answer back; the web server and the
 // development server both use it. Only end-to-end headers cross: the hop-by-hop ones (RFC 9110 §7.6.1)
 // describe one connection, and the hop to the api is a different, pooled one.
@@ -21,11 +22,13 @@ export function proxyToApi(req: IncomingMessage, res: ServerResponse, set: Outgo
   // that way by default (not DELETE, for one) and an unframed body would corrupt the pooled connection.
   if (req.headers["transfer-encoding"] && req.headers["content-length"] === undefined) headers["transfer-encoding"] = "chunked";
   const upstream = httpRequest({ hostname: API.hostname, port: API.port, path: req.url, method: req.method, headers }, (up) => {
-    res.writeHead(up.statusCode ?? 502, endToEnd(up.headers));
+    const responseHeaders = endToEnd(up.headers);
+    if (typeof responseHeaders.location === "string") responseHeaders.location = industryPath(responseHeaders.location);
+    res.writeHead(up.statusCode ?? 502, responseHeaders);
     up.pipe(res);
   });
   upstream.on("error", (error) => {
-    logError(error, { msg: "api proxy request failed", method: req.method, path: req.url });
+    logError(error, { msg: "api proxy request failed", method: req.method, path: (req.url ?? "").split("?")[0]!.slice(0, 200) });
     res.statusCode = 502;
     res.end("api unavailable");
   });

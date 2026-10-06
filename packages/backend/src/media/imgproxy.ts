@@ -1,3 +1,4 @@
+import { industryPath } from "@aihot/industry/paths";
 // Signed image proxy URLs. The address format and signing key stay stable, so proxy URLs
 // already cached in full RSS and readers keep working: /api/img-proxy?u=&mode=&exp=&sig=
 // sig = hex(HMAC-SHA256(IMG_PROXY_SIGN_SECRET, `${u}|${mode}|${exp}`)), sent as its first 16 hex
@@ -38,7 +39,7 @@ export function proxiedImage(url: string | null | undefined, mode: ProxyMode, ab
   if (!/^https?:\/\//i.test(url)) return null;
   const exp = proxyExpiry(nowMs, lifetimeSeconds);
   const path = `/api/img-proxy?u=${encodeURIComponent(url)}&mode=${mode}&exp=${exp}&sig=${signature(url, mode, exp).slice(0, SIG_HEX)}`;
-  return absolute ? `${config.siteUrl}${path}` : path;
+  return absolute ? `${config.siteUrl}${path}` : industryPath(path);
 }
 
 /** Browser source candidates, each independently signed with the same expiry boundary. */

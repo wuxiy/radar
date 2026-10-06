@@ -1,3 +1,4 @@
+import { industryPath } from "@aihot/industry/paths";
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { Await, isRouteErrorResponse, Link, useAsyncError, useLoaderData, useNavigate, useRevalidator, type ClientLoaderFunctionArgs } from "react-router";
 import type { Route } from "./+types/item";
@@ -273,7 +274,7 @@ function ItemView({ item }: { item: SiteItemDetail }) {
   };
   const copyMarkdown = async () => {
     try {
-      const res = await fetch(`/items/${item.id}/markdown`);
+      const res = await fetch(industryPath(`/items/${item.id}/markdown`));
       if (!res.ok) throw new Error(String(res.status));
       await navigator.clipboard.writeText(await res.text());
       setToast("Markdown 已复制");
@@ -314,7 +315,7 @@ function ItemView({ item }: { item: SiteItemDetail }) {
             (inWeChat() ? (
               <MenuItem icon={<IconDownload size={15} />} onSelect={() => { close(); void copyMarkdown(); }}>复制 Markdown</MenuItem>
             ) : (
-              <MenuItem icon={<IconDownload size={15} />} href={`/items/${item.id}/markdown`} download onSelect={close}>
+              <MenuItem icon={<IconDownload size={15} />} href={industryPath(`/items/${item.id}/markdown`)} download onSelect={close}>
                 导出 Markdown
               </MenuItem>
             ))}
@@ -336,7 +337,7 @@ function ItemView({ item }: { item: SiteItemDetail }) {
   const actions = (
     <div className="flex items-center gap-1">
       <a
-        href={item.links.original}
+        href={industryPath(item.links.original)}
         target="_blank"
         rel="noopener noreferrer"
         className="inline-flex h-8 flex-1 items-center justify-center gap-1.5 rounded-full border border-line-strong bg-surface px-3.5 text-[12.5px] font-medium text-ink-2 transition-colors hover:border-ink-4 hover:text-ink"
@@ -539,7 +540,7 @@ function ItemView({ item }: { item: SiteItemDetail }) {
 
           <p className="mt-8 text-[13px] text-ink-4">
             来源：
-            <a href={item.links.original} target="_blank" rel="noopener noreferrer" className="text-ink-3 hover:text-accent">
+            <a href={industryPath(item.links.original)} target="_blank" rel="noopener noreferrer" className="text-ink-3 hover:text-accent">
               {isX ? item.x!.authorName : item.source.name}
             </a>
             <span> · {hostOf(item.links.original)}</span>

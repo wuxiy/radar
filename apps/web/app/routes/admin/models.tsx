@@ -8,6 +8,7 @@ import { useAdminAction } from "../../features/admin/action";
 import { bj, money, num } from "../../features/admin/format";
 import { AdminPage, Badge, Button, Card, DataTable, Empty, Field, FilterChips, ReasonDialog, Select } from "../../features/admin/ui";
 import { webModules } from "../../site-modules";
+import { ModelConfiguration } from "../../features/admin/ModelConfiguration";
 
 
 
@@ -41,6 +42,7 @@ export default function ModelsAdmin({ loaderData: m }: Route.ComponentProps) {
       actions={<FilterChips param="days" options={[{ value: "1", label: "24 小时" }, { value: "", label: "7 天" }, { value: "30", label: "30 天" }]} />}
     >
       <div className="grid gap-5">
+        <ModelConfiguration configuration={m.configuration} />
         {m.capabilities.map((c) => {
           const total = c.usage.reduce((a, u) => a + u.calls, 0);
           return (
@@ -73,7 +75,7 @@ export default function ModelsAdmin({ loaderData: m }: Route.ComponentProps) {
                   rowKey={(u) => `${u.purpose}|${u.model}|${u.promptVersion}`}
                   columns={[
                     { key: "m", label: "模型", render: (u) => <span className="whitespace-nowrap font-mono text-[12px]">{u.model}</span> },
-                    { key: "v", label: "提示版本", render: (u) => <span className="whitespace-nowrap font-mono text-[11.5px] text-ink-3">{u.promptVersion ?? "—"}</span> },
+                    { key: "v", label: "提示版本", render: (u) => <span className="block max-w-[240px] truncate font-mono text-[11.5px] text-ink-3" title={u.promptVersion ?? undefined}>{u.promptVersion ?? "—"}</span> },
                     { key: "p", label: "用途", render: (u) => <span className="whitespace-nowrap font-mono text-[11.5px] text-ink-3">{u.purpose}</span> },
                     { key: "c", label: "调用", align: "right", render: (u) => num(u.calls) },
                     {

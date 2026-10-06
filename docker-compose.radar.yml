@@ -1,0 +1,75 @@
+# One Radar deployment, two logical databases, one public port.
+# cp .env.radar.example .env
+# docker compose -f docker-compose.radar.yml up -d --build
+name: radar
+
+x-app: &app
+  build: .
+  image: radar-app
+  env_file: ${RADAR_ENV_FILE:-.env}
+  restart: unless-stopped
+  environment: &app-env
+    NODE_ENV: production
+    RADAR_AI_DATABASE_URL: postgres://radar:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@db:5432/radar_ai
+    RADAR_MEDICAL_DATABASE_URL: postgres://radar:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@db:5432/radar_medical
+    AIHOT_DATA_DIR: /data
+    API_BASE_URL: http://api:3001
+    LOCAL_ROUTER_URL: http://web:3000
+  volumes:
+    - data:/data
+  depends_on:
+    db:
+      condition: service_healthy
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: radar
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      POSTGRES_DB: radar_ai
+    volumes:
+      - db:/var/lib/postgresql/data
+      - ./deploy/radar/init-db.sh:/docker-entrypoint-initdb.d/10-radar.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U radar -d radar_ai"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+  setup:
+    <<: *app
+    restart: "no"
+    command: ["node", "deploy/radar/run.ts", "setup"]
+  api:
+    <<: *app
+    command: ["node", "deploy/radar/run.ts", "api"]
+    environment:
+      <<: *app-env
+      API_HOST: 0.0.0.0
+    depends_on:
+      setup:
+        condition: service_completed_successfully
+  worker:
+    <<: *app
+    command: ["node", "deploy/radar/run.ts", "worker"]
+    stop_grace_period: 225s
+    depends_on:
+      setup:
+        condition: service_completed_successfully
+  web:
+    <<: *app
+    command: ["node", "deploy/radar/run.ts", "web"]
+    environment:
+      <<: *app-env
+      WEB_HOST: 0.0.0.0
+      WEB_PORT: "3000"
+    ports:
+      - "${PORT:-3000}:3000"
+    depends_on:
+      api:
+        condition: service_started
+
+volumes:
+  db: {}
+  data: {}

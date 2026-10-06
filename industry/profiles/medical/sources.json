@@ -1,0 +1,74 @@
+{
+  "$comment": "四个已确认来源均初始暂停。HIT 为 RSS；其他三站在稳定列表与日期逐条核验之前使用 external 补录，未配置未经验证的选择器。账号由用户补充。",
+  "sources": [
+    {
+      "id": "rss-hit180",
+      "name": "HIT 专家网",
+      "kind": "rss",
+      "config": {
+        "feedUrl": "https://www.hit180.com/feed/",
+        "_aihot": {
+          "initialBackfillLimit": 8
+        }
+      },
+      "tier": "T2",
+      "first_party": false,
+      "participation_mode": "editorial",
+      "interval_minutes": 60,
+      "tags": [
+        "医疗行业"
+      ],
+      "site_fulltext": false,
+      "syndicate_fulltext": false,
+      "enabled": false
+    },
+    {
+      "id": "external-chima",
+      "name": "CHIMA（外部补录）",
+      "kind": "external",
+      "config": {},
+      "tier": "T1",
+      "first_party": true,
+      "participation_mode": "editorial",
+      "interval_minutes": 60,
+      "tags": [
+        "医疗行业"
+      ],
+      "site_fulltext": false,
+      "syndicate_fulltext": false,
+      "enabled": false
+    },
+    {
+      "id": "external-healthcare-informatics",
+      "name": "健康界信息化（外部补录）",
+      "kind": "external",
+      "config": {},
+      "tier": "T2",
+      "first_party": false,
+      "participation_mode": "editorial",
+      "interval_minutes": 60,
+      "tags": [
+        "医疗行业"
+      ],
+      "site_fulltext": false,
+      "syndicate_fulltext": false,
+      "enabled": false
+    },
+    {
+      "id": "external-vbdata",
+      "name": "动脉网（外部补录）",
+      "kind": "external",
+      "config": {},
+      "tier": "T2",
+      "first_party": false,
+      "participation_mode": "editorial",
+      "interval_minutes": 60,
+      "tags": [
+        "医疗行业"
+      ],
+      "site_fulltext": false,
+      "syndicate_fulltext": false,
+      "enabled": false
+    }
+  ]
+}

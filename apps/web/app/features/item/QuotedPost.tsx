@@ -1,3 +1,4 @@
+import { industryPath } from "@aihot/industry/paths";
 // The post an X item quotes, as X shows it under the post: who wrote it, what they said and a way to
 // it. The item's own text and translation often only make sense next to it.
 import type { XPostView } from "@aihot/contracts/site";
@@ -31,7 +32,7 @@ export function QuotedPost({ quoted, original = false }: { quoted: Quoted; origi
         </details>
       )}
       {quoted.url && (
-        <a href={quoted.url} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-0.5 text-[13px] text-accent hover:text-accent-ink">
+        <a href={industryPath(quoted.url)} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-0.5 text-[13px] text-accent hover:text-accent-ink">
           在 X 查看被引用的帖子 <IconArrowUpRight size={13} />
         </a>
       )}

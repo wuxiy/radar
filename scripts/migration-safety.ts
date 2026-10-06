@@ -103,6 +103,9 @@ export function migrationPlan(text: string): MigrationPlan {
     return { kind: "transaction" };
   }
   if (alterDefault.test(sql)) return { kind: "transaction" };
+  // Replacing an enum-like CHECK uses separate drop/add/validate files. Dropping one named
+  // constraint is catalog-only; no CASCADE or extra action, and the runner bounds lock waiting.
+  if (new RegExp(`^alter table ${RELATION} drop constraint if exists ${IDENT}$`, "i").test(sql)) return { kind: "transaction" };
   if (new RegExp(`^alter table ${RELATION} add constraint ${IDENT} (?:check \\(.*\\)|foreign key \\(.*\\) references .*) not valid$`, "i").test(sql)) return { kind: "transaction" };
   throw new Error(`not safe for an online migration: ${sql.slice(0, 180)}. Use constant-default columns, NOT VALID then separate validation, concurrent indexes, column MCV statistics with separate column ANALYZE, or DROP TABLE IF EXISTS for one table nothing uses; backfill data in bounded batches outside release migrations.`);
 }

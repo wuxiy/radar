@@ -1,3 +1,4 @@
+import { industryPath } from "@aihot/industry/paths";
 // Duplicate reports of one news fact. Desktop expands inline; phones use a sheet.
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, useLocation } from "react-router";
@@ -45,7 +46,7 @@ function useReports(url: string, saved: GroupReport[] | null = null) {
     const controller = (request.current = new AbortController());
     setState((s) => ({ url, reports: s.url === url ? s.reports : null, loading: true, error: false }));
     try {
-      const res = await fetch(url, { signal: controller.signal });
+      const res = await fetch(industryPath(url), { signal: controller.signal });
       if (!res.ok && !(again && res.status === 404)) throw new Error(String(res.status));
       const reports = res.ok ? ((await res.json()) as GroupReportsResponse).reports : [];
       if (!controller.signal.aborted) setState({ url, reports, loading: false, error: false });
@@ -131,7 +132,7 @@ export function GroupSources({ group, filters, parentId }: { group: GroupInfo; f
               <Link viewTransition to={`/items/${r.id}`} className="min-w-0 flex-1 truncate text-ink-2 hover:text-accent">
                 {r.title}
               </Link>
-              <a href={r.originalUrl} target="_blank" rel="noopener noreferrer" aria-label="打开原文" className="shrink-0 text-ink-4 hover:text-accent">
+              <a href={industryPath(r.originalUrl)} target="_blank" rel="noopener noreferrer" aria-label="打开原文" className="shrink-0 text-ink-4 hover:text-accent">
                 <IconArrowUpRight size={13} />
               </a>
             </li>
@@ -193,7 +194,7 @@ function GroupSheet({ open, onClose, group, filters, parentId }: {
                 </span>
                 <span className="mt-0.5 line-clamp-2 text-[15px] leading-[1.5] text-ink-2">{r.title}</span>
               </Link>
-              <a href={r.originalUrl} target="_blank" rel="noopener noreferrer" aria-label="打开原文" className="-mr-2 grid size-11 shrink-0 place-items-center rounded-full text-ink-4 active:bg-bg-sunk">
+              <a href={industryPath(r.originalUrl)} target="_blank" rel="noopener noreferrer" aria-label="打开原文" className="-mr-2 grid size-11 shrink-0 place-items-center rounded-full text-ink-4 active:bg-bg-sunk">
                 <IconArrowUpRight size={16} />
               </a>
             </li>

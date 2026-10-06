@@ -1,16 +1,19 @@
+import { PROFILE } from "@aihot/industry/profile";
+import { localPath } from "@aihot/industry/paths";
 // Reader state kept only in this browser, and the site's one guarded way to browser storage. Keep the
 // keys and formats once readers have data under them: existing readers' data must stay readable as-is.
 // Storage failures degrade silently.
 import { useEffect, useSyncExternalStore } from "react";
 import { beijingDate } from "@aihot/contracts/time";
 
+const namespace = PROFILE.id === "medical" ? "radar-medical" : "aihot";
 export const KEYS = {
-  starred: "aihot-starred-items",
-  read: "aihot-read-items",
+  starred: `${namespace}-starred-items`,
+  read: `${namespace}-read-items`,
   theme: "aihot-theme",
-  changelogSeen: "aihot-changelog-seen-version",
-  feedbackDraft: "aihot-feedback-draft-v1",
-  recentSearches: "aihot-recent-searches",
+  changelogSeen: `${namespace}-changelog-seen-version`,
+  feedbackDraft: `${namespace}-feedback-draft-v1`,
+  recentSearches: `${namespace}-recent-searches`,
 } as const;
 
 const STARRED_LIMIT = 500;
@@ -324,12 +327,12 @@ export function clearRecentSearches() {
 }
 
 // the page the reader was on (feedback records where a problem was seen)
-const LAST_PAGE_KEY = "aihot:last-page";
+const LAST_PAGE_KEY = `${namespace}:last-page`;
 const NOT_A_PLACE = /^\/(feedback|more)(\/|$)|^\/admin(\/|$)/;
 
 /** Called on every in-site navigation: remembers the latest real page, never feedback, "更多" or the admin. */
 export function rememberPage(path: string) {
-  if (!NOT_A_PLACE.test(path)) writeRaw(LAST_PAGE_KEY, path, "session");
+  if (!NOT_A_PLACE.test(localPath(path))) writeRaw(LAST_PAGE_KEY, path, "session");
 }
 
 export function lastPage(): string | null {
@@ -339,6 +342,7 @@ export function lastPage(): string | null {
 
 // export / import (version 1)
 export interface ExportBundle {
+  industry?: "ai" | "medical";
   version: 1;
   starred: LocalStarredItem[];
   read: string[];
@@ -347,7 +351,7 @@ export interface ExportBundle {
 
 export function exportBundle(): ExportBundle {
   const pref = getThemePreference();
-  return { version: 1, starred: getStarred(), read: getReadIds(), theme: pref ?? "auto" };
+  return { ...(PROFILE.basePath ? { industry: PROFILE.id } : {}), version: 1, starred: getStarred(), read: getReadIds(), theme: pref ?? "auto" };
 }
 
 export interface ImportReport {
@@ -371,6 +375,8 @@ export function importBundle(text: string): ImportReport {
   }
   const d = data as Partial<ExportBundle>;
   if (!d || typeof d !== "object" || d.version !== 1) throw new Error("文件格式不对（需要 version: 1）");
+  if (d.industry !== undefined && d.industry !== PROFILE.id) throw new Error("收藏文件属于另一个行业，请切换到对应行业后导入。");
+  if (PROFILE.id === "medical" && d.industry === undefined) throw new Error("旧版未标记行业的收藏仅可在 AI 频道导入。");
   return mergeLocalData({
     starred: Array.isArray(d.starred) ? d.starred : [],
     read: Array.isArray(d.read) ? d.read : [],

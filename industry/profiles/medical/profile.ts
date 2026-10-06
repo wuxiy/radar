@@ -1,0 +1,1 @@
+export const PROFILE: { readonly id: "ai" | "medical"; readonly basePath: string; readonly directory: string; readonly siteDirectory: string; readonly brandDirectory: string } = {"id": "medical", "basePath": "/medical", "directory": "industry/profiles/medical", "siteDirectory": "site/profiles/medical", "brandDirectory": "site/profiles/brand"} as const;

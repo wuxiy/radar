@@ -1,3 +1,5 @@
+import { PROFILE } from "@aihot/industry/profile";
+import { localPath } from "@aihot/industry/paths";
 // Page metadata from one place: title template, canonical address, OG images, robots; and list addresses,
 // with the feed filters they carry. The site's name and wording come from site/site.ts;
 //; its address from SITE_URL.
@@ -11,7 +13,7 @@ import { SITE, subjectAfter, withSubject } from "@aihot/site";
  * the page's own origin in the browser.
  */
 export function siteUrl(): string {
-  if (typeof window !== "undefined") return window.location.origin;
+  if (typeof window !== "undefined") return window.location.origin + PROFILE.basePath;
   return (process.env.SITE_URL || SITE.defaultUrl).replace(/\/+$/, "");
 }
 
@@ -69,7 +71,7 @@ export function pageMeta(input: PageMetaInput): MetaDescriptor[] {
   const base = siteUrl();
   const title = input.title ? (input.rawTitle ? input.title : titled(input.title)) : HOME_TITLE;
   const description = input.description ?? SITE_DESCRIPTION;
-  const url = `${base}${input.path}`;
+  const url = `${base}${localPath(input.path)}`;
   const image = input.image ? (input.image.startsWith("http") ? input.image : `${base}${input.image}`) : `${base}/og/site.png`;
   const tags: MetaDescriptor[] = [
     { title },
@@ -191,7 +193,7 @@ export function itemListLd(path: string, name: string, titles: string[]) {
 /** An item page: the site's reading of a third-party report, based on (not claiming) the original. */
 export function articleLd(input: { path: string; headline: string; description?: string | null; publishedAt?: string | null; modifiedAt?: string | null; basedOn?: string | null; section?: string[] }) {
   const base = siteUrl();
-  const url = `${base}${input.path}`;
+  const url = `${base}${localPath(input.path)}`;
   const description = input.description?.trim();
   return {
     "@context": "https://schema.org",
@@ -248,7 +250,7 @@ export function topicLd(input: {
   lists: Array<{ name: string; entries: Array<{ title: string; href: string | null }> }>;
 }) {
   const base = siteUrl();
-  const url = `${base}${input.path}`;
+  const url = `${base}${localPath(input.path)}`;
   // Entries name their event page when they have one (event pages are indexable, most article pages are not).
   const lists = input.lists.filter((l) => l.entries.length > 0).map((l) => ({
     "@type": "ItemList",

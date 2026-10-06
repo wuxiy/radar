@@ -1,3 +1,4 @@
+import { industryPath } from "@aihot/industry/paths";
 import { SITE } from "@aihot/site";
 import { useState, type ReactNode } from "react";
 import { Link } from "react-router";
@@ -75,7 +76,7 @@ export default function ContentItem({ loaderData }: Route.ComponentProps) {
           {p?.visibility !== "withdrawn" && p && (
             <>
               <span>·</span>
-              <a className="text-accent" href={`/items/${a.id}`} target="_blank" rel="noreferrer">公开页</a>
+              <a className="text-accent" href={industryPath(`/items/${a.id}`)} target="_blank" rel="noreferrer">公开页</a>
             </>
           )}
         </span>
@@ -219,7 +220,7 @@ export default function ContentItem({ loaderData }: Route.ComponentProps) {
                   </div>
                   {m.story_public_id && (
                     <div className="mt-0.5">
-                      事件 <a className="text-accent" href={`/story/${m.story_public_id}`} target="_blank" rel="noreferrer">{m.story_title}</a> <span className="font-mono text-[12px] text-ink-4">#{m.story_id}</span>
+                      事件 <a className="text-accent" href={industryPath(`/story/${m.story_public_id}`)} target="_blank" rel="noreferrer">{m.story_title}</a> <span className="font-mono text-[12px] text-ink-4">#{m.story_id}</span>
                     </div>
                   )}
                 </div>

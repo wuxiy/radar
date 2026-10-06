@@ -330,7 +330,35 @@ export interface AdminModelUsage {
   estimate: { amount: number; currency: string } | null;
 }
 
+export interface AdminDefaultModel {
+  baseUrl: string;
+  model: string;
+  connectIp: string;
+  extraJson: string;
+  jsonMode: boolean;
+  vision: boolean;
+  keyConfigured: boolean;
+  source: "admin" | "environment";
+  callsEnabled: boolean;
+  budget: AdminBudget | null;
+}
+
+export interface AdminModelConfigurationInput {
+  baseUrl: string;
+  model: string;
+  apiKey?: string;
+  connectIp: string;
+  extraJson: string;
+  jsonMode: boolean;
+  vision: boolean;
+  perMinute: number;
+  perHour: number;
+  perDay: number;
+  reason: string;
+}
+
 export interface AdminModels {
+  configuration: AdminDefaultModel;
   days: number;
   capabilities: Array<{ key: string; label: string; env: string; defaultModel: string; vision: boolean; current: { model: string; source: "admin" | "env" | "default" }; usage: AdminModelUsage[] }>;
   choices: Array<{ key: string; service: string; vision: boolean }>;

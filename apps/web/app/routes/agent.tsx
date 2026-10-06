@@ -1,3 +1,4 @@
+import { industryPath } from "@aihot/industry/paths";
 import { useEffect, useState } from "react";
 import { IntentLink } from "../components/ui/IntentLink";
 import { useLoaderData, useNavigate, useSearchParams, type ClientLoaderFunctionArgs, type ShouldRevalidateFunction } from "react-router";
@@ -139,7 +140,7 @@ export default function AgentPage() {
             return (
               <a
                 key={t.key}
-                href={hrefOf(t.key)}
+                href={industryPath(hrefOf(t.key))}
                 onClick={(e) => {
                   e.preventDefault();
                   select(t.key);
@@ -159,7 +160,7 @@ export default function AgentPage() {
       <AsideCard title="接入资源">
         <nav aria-label="接入资源" className="-mx-2 -mb-1">
           {RESOURCES.map(([l, h, note]) => (
-            <a key={h} href={h} target={h.startsWith("http") ? "_blank" : undefined} rel="noopener noreferrer" className="group flex items-start gap-2 rounded-control px-2 py-2 transition-colors hover:bg-bg-sunk">
+            <a key={h} href={industryPath(h)} target={h.startsWith("http") ? "_blank" : undefined} rel="noopener noreferrer" className="group flex items-start gap-2 rounded-control px-2 py-2 transition-colors hover:bg-bg-sunk">
               <span className="min-w-0 flex-1">
                 <span className="block text-[13.5px] text-ink-2 group-hover:text-ink">{l}</span>
                 <span className="mt-0.5 block text-[12px] text-ink-4">{note}</span>
@@ -204,7 +205,7 @@ export default function AgentPage() {
           return (
             <a
               key={t.key}
-              href={hrefOf(t.key)}
+              href={industryPath(hrefOf(t.key))}
               role="tab"
               id={`agent-tab-${t.key}`}
               aria-selected={on}

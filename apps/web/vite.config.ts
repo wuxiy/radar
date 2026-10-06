@@ -1,3 +1,4 @@
+import { industryPath, localPath } from "@aihot/industry/paths";
 import path from "node:path";
 import { reactRouter } from "@react-router/dev/vite";
 import tailwindcss from "@tailwindcss/vite";
@@ -14,29 +15,33 @@ function devEdge(): Plugin {
       server.middlewares.use((req, res, next) => {
         const raw = req.url ?? "/";
         const qi = raw.indexOf("?");
-        const pathname = qi >= 0 ? raw.slice(0, qi) : raw;
+        const pathname = localPath(qi >= 0 ? raw.slice(0, qi) : raw);
         const search = qi >= 0 ? raw.slice(qi) : "";
         if (pathname.startsWith("/@") || pathname.startsWith("/node_modules/") || pathname.startsWith("/app/") || pathname.startsWith("/__")) return next();
         const decision = resolveRedirect(pathname, search);
         if (decision) {
           for (const [k, v] of Object.entries(decision.headers)) res.setHeader(k, v);
-          if (decision.location) res.setHeader("Location", decision.location);
+          if (decision.location) res.setHeader("Location", industryPath(decision.location));
           res.statusCode = decision.status;
           return res.end();
         }
         if (!isApiOwned(pathname)) return next();
         // The api sees the Host it gets in production.
         if (DEPLOYMENT.originHost) req.headers.host = DEPLOYMENT.originHost;
+        req.url = pathname + search;
         proxyToApi(req, res);
       });
     },
   };
 }
 
+const industry = process.env.RADAR_INDUSTRY;
 export default defineConfig({
+  base: industry ? `/${industry}/` : "/",
   plugins: [devEdge(), tailwindcss(), reactRouter()],
   // The modules' pages import the engine's web code by this name (tsconfig.json paths).
-  resolve: { alias: { "@aihot/web/": `${path.resolve(import.meta.dirname, "app")}/` } },
+  resolve: { conditions: [industry === "medical" ? "medical" : industry === "ai" ? "radar-ai" : "default", "module", "browser", "development|production"], alias: { "@aihot/web/": `${path.resolve(import.meta.dirname, "app")}/` } },
+  ...(industry ? { ssr: { resolve: { conditions: [industry === "medical" ? "medical" : "radar-ai", "module", "node", "development|production"], externalConditions: [industry === "medical" ? "medical" : "radar-ai", "node"] } } } : {}),
   server: { port: 3000, strictPort: true },
   build: {
     rolldownOptions: {

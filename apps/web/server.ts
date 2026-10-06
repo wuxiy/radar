@@ -1,3 +1,5 @@
+import { PROFILE } from "@aihot/industry/profile";
+import { industryPath, localPath } from "@aihot/industry/paths";
 // Production web server: built client assets, the shared redirect table and SSR. Api-owned paths are
 // proxied to the api process, so one port serves the whole site; a reverse proxy in front may also send
 // them to the api directly.
@@ -20,7 +22,8 @@ const HOST = process.env.WEB_HOST || "127.0.0.1";
  * limits (sign-in attempts, feedback).
  */
 const TRUST_PROXY = process.env.TRUST_PROXY === "true";
-const CLIENT_DIR = path.resolve(import.meta.dirname, "build/client");
+const BUILD_DIR = PROFILE.basePath ? `build/${PROFILE.id}` : "build";
+const CLIENT_DIR = path.resolve(import.meta.dirname, BUILD_DIR, "client");
 /** Browsers keep a page at most this long, so a withdrawal reaches them within minutes. */
 const BROWSER_MAX_SECONDS = 300;
 
@@ -39,7 +42,7 @@ const TYPES: Record<string, string> = {
 };
 
 // A file URL, not a path: on Windows import() reads "C:\..." as a URL with the scheme "c:".
-const build: ServerBuild = await import(pathToFileURL(path.resolve(import.meta.dirname, "build/server/index.js")).href);
+const build: ServerBuild = await import(pathToFileURL(path.resolve(import.meta.dirname, BUILD_DIR, "server/index.js")).href);
 // Keep an empty result for pages without a loader. An older document can still unwrap its route's
 // result, so a changed data shape reaches React's release recovery rather than failing in the router.
 // The client manifest still declares no loader: current documents make no request for these pages.
@@ -93,7 +96,7 @@ function pageResponse(req: import("node:http").IncomingMessage, res: import("nod
   const target = req.url ?? "/";
   // An origin-form target is a path even when it starts with //, not a new URL authority.
   const url = new URL(target.startsWith("/") ? `http://web.local${target}` : target, "http://web.local");
-  const pathname = decodeURIComponent(url.pathname).replace(/\.data$/, "");
+  const pathname = localPath(decodeURIComponent(url.pathname)).replace(/\.data$/, "");
   const publicRead = (req.method === "GET" || req.method === "HEAD") && !/^\/admin(?:\/|$)/i.test(pathname);
   if (publicRead && url.pathname.endsWith(".data")) {
     url.searchParams.delete("_routes");
@@ -105,7 +108,7 @@ function pageResponse(req: import("node:http").IncomingMessage, res: import("nod
   const writeHead = res.writeHead.bind(res);
   res.writeHead = ((status: number, messageOrHeaders?: string | import("node:http").OutgoingHttpHeaders, headers?: import("node:http").OutgoingHttpHeaders) => {
     const outgoing = typeof messageOrHeaders === "string" ? headers : messageOrHeaders;
-    for (const [name, value] of Object.entries(outgoing ?? {})) if (value !== undefined) res.setHeader(name, value);
+    for (const [name, value] of Object.entries(outgoing ?? {})) if (value !== undefined) res.setHeader(name, name.toLowerCase() === "location" && typeof value === "string" ? industryPath(value) : value);
     // Download managers can treat prefetched .data with the unknown text/x-script type as a file.
     // Turbo-stream is text decoded from the response body; its client does not depend on the MIME.
     if (url.pathname.endsWith(".data") && res.getHeader("Content-Type") === "text/x-script") {
@@ -139,13 +142,17 @@ function pageResponse(req: import("node:http").IncomingMessage, res: import("nod
 async function handle(req: import("node:http").IncomingMessage, res: import("node:http").ServerResponse) {
   const raw = req.url ?? "/";
   const qi = raw.indexOf("?");
-  const pathname = qi >= 0 ? raw.slice(0, qi) : raw;
+  const publicPath = qi >= 0 ? raw.slice(0, qi) : raw;
+  if (PROFILE.basePath && publicPath !== PROFILE.basePath && !publicPath.startsWith(`${PROFILE.basePath}/`)) {
+    res.writeHead(404, { "Cache-Control": "no-store" }); return res.end("Not found");
+  }
+  const pathname = localPath(publicPath);
   const search = qi >= 0 ? raw.slice(qi) : "";
 
   const decision = resolveRedirect(pathname, search);
   if (decision) {
     for (const [k, v] of Object.entries(decision.headers)) res.setHeader(k, v);
-    if (decision.location) res.setHeader("Location", decision.location);
+    if (decision.location) res.setHeader("Location", industryPath(decision.location));
     res.statusCode = decision.status;
     return res.end(decision.location ? undefined : decision.status === 410 ? "Gone" : "Not found");
   }
@@ -155,6 +162,7 @@ async function handle(req: import("node:http").IncomingMessage, res: import("nod
     // entry), or this connection's own. Both headers carry only that.
     const forwarded = String(req.headers["x-forwarded-for"] ?? "").split(",").map((v) => v.trim()).filter(Boolean);
     const client = TRUST_PROXY && forwarded.length ? forwarded[forwarded.length - 1]! : (req.socket.remoteAddress ?? "");
+    req.url = pathname + search;
     return proxyToApi(req, res, { "x-forwarded-for": client, "x-real-ip": client });
   }
 

@@ -1,3 +1,4 @@
+import { PROFILE } from "@aihot/industry/profile";
 // History-entry caches keep same-document returns synchronous. Writes are coalesced after interaction;
 // hiding/leaving the document flushes them so a browser back/forward reload can restore the same data.
 import { readJson, storedKeys, writeRaw } from "./local-state.ts";
@@ -6,6 +7,7 @@ interface Timed { savedAt: number }
 const MAX_MEMORY_ENTRIES = 20;
 
 export function sessionCache<T extends Timed>(prefix: string, maxAge: number) {
+  if (PROFILE.basePath) prefix = `radar:${PROFILE.id}:${prefix}`;
   const memory = new Map<string, T>();
   const dirty = new Map<string, T>();
   let timer: ReturnType<typeof setTimeout> | undefined;

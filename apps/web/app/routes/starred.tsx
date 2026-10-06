@@ -1,3 +1,4 @@
+import { industryPath } from "@aihot/industry/paths";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router";
 import type { ItemAvailability } from "@aihot/contracts/site";
@@ -49,7 +50,7 @@ export default function StarredPage() {
     for (let i = 0; i < ids.length; i += 100) batches.push(ids.slice(i, i + 100));
     Promise.all(
       batches.map((batch) =>
-        fetch(`/api/site/items/availability?ids=${encodeURIComponent(batch.join(","))}`, { signal: controller.signal })
+        fetch(industryPath(`/api/site/items/availability?ids=${encodeURIComponent(batch.join(","))}`), { signal: controller.signal })
           .then((r) => (r.ok ? (r.json() as Promise<Record<string, ItemAvailability>>) : {}))
           .catch(() => ({})),
       ),

@@ -1,0 +1,12 @@
+Generation: built-in image_gen.imagegen
+Output: radar-logo-v1.png
+Transparent background: true
+
+Use case: logo-brand.
+Asset type: a production logo lockup for Radar, a restrained Chinese industry news and intelligence website with AI and medical channels. Create one finished original horizontal logo, not a presentation board.
+Subject: a distinctive minimal radar signal emblem on the left, and the exact word "Radar" on the right. The emblem uses two bold clean incomplete concentric arcs and one small solid signal dot toward the upper right, with a short radial stroke suggesting discovery. Make the emblem feel intentional and memorable through asymmetry and excellent negative space; avoid dense targeting grids.
+Style: flat, crisp vector-like identity design, sophisticated editorial software brand. Consistent medium-bold strokes, restrained rounded ends. Strong silhouette and legibility at small navigation sizes.
+Typography: exact title-case text "Radar", beautifully drawn modern sans-serif, semibold, modest spacing; no subtitle or additional text.
+Palette: emblem in the site's existing deep teal #176b75; wordmark in charcoal #202a30. Only these flat colors, no gradients, highlights, shadows or texture.
+Composition: horizontal lockup centered, emblem about the height of the capital R, generous but compact gap, clean balanced proportions. Transparent background with sensible clear margin. Large enough to preserve sharp contours.
+Avoid: medical crosses, ECG traces, hospital imagery, AI sparkles, brains, robots, 3D, mockups, rounded app-icon container, watermarks, additional logos, multiple variants, slogans. Deliver only the logo artwork with genuine transparency.

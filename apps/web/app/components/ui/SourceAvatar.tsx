@@ -1,3 +1,4 @@
+import { industryPath } from "@aihot/industry/paths";
 import { useState } from "react";
 import { sourceInitial } from "../../lib/format";
 
@@ -8,7 +9,7 @@ export function SourceAvatar({ name, iconUrl, avatarUrl, iconSrcSet, avatarSrcSe
   if (src && !failed) {
     return (
       <img
-        src={src}
+        src={industryPath(src)}
         srcSet={avatarUrl ? avatarSrcSet : iconSrcSet}
         sizes={`${size}px`}
         decoding="async"

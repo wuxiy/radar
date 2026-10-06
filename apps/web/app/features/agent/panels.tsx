@@ -1,3 +1,4 @@
+import { industryPath } from "@aihot/industry/paths";
 // The engine's ways in, one panel each: what it is for, the steps to connect, then the details folded away.
 // Addresses are the site's configured public address (`base`); what visitors copy carries the site's tag
 // (CopyTag) when it has one.
@@ -179,7 +180,7 @@ export function ApiPanel(props: AgentPanelProps) {
   return (
     <>
       <PanelHead label={`REST API · ${V}`} title="匿名 GET，拿来就能用">
-        不用 token；浏览器跨域、curl 和各语言默认的 HTTP 客户端都能直接调。路径是 /api/v1，字段和错误码以 <a href="/openapi-v1.json" className={link}>OpenAPI</a> 为准。
+        不用 token；浏览器跨域、curl 和各语言默认的 HTTP 客户端都能直接调。路径是 /api/v1，字段和错误码以 <a href={industryPath("/openapi-v1.json")} className={link}>OpenAPI</a> 为准。
       </PanelHead>
       <CodeBlock className="mt-6" title="第一个请求" lang="bash" code={`${curl} '${items}'`} />
 

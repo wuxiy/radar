@@ -7,6 +7,7 @@ import { sql } from "../db.ts";
 import { capabilities, capabilityAcceptsModel, invalidateModelCache, modelSources } from "../editorial/models.ts";
 import { MODELS } from "../providers/llm.ts";
 import { audit } from "../audit.ts";
+import { modelConfiguration } from "./model-configuration.ts";
 
 interface UsageRow {
   purpose: string;
@@ -96,7 +97,7 @@ export async function modelsOverview(days = 7): Promise<BeforeJson<AdminModels>>
       })),
   }));
   const choices = Object.values(MODELS).map((m) => ({ key: m.key, service: m.service, vision: !!m.vision }));
-  return { days, capabilities: steps, choices, history, benches };
+  return { days, capabilities: steps, choices, history, benches, configuration: await modelConfiguration() };
 }
 
 /** Switches a capability to another registered model (or back to the environment/default when null). */

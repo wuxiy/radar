@@ -573,3 +573,16 @@ test("a correction between snapshot pages arrives through changes after the fixe
     ({ op: change.op, id: change.item.id, title: change.item.title })), [{ op: 'upsert', id, title }],
   'the client applies the correction once after finishing the original snapshot');
 });
+
+// A future release must not escape through the sync ledger's stored revision.
+test("selected snapshots enforce the current release boundary before serving ledger payloads", async () => {
+  const id = await article();
+  await publishArticle(id, { releasedAt: new Date(Date.now() + 86_400_000) });
+  for (const fields of ["default", "minimal"]) {
+    const snapshot = JSON.parse((await get(`/api/v1/selected/snapshot?fields=${fields}&limit=1000`)).body);
+    assert.ok(!snapshot.items.some((item: { id: string }) => item.id === id), "a stored ledger entry is not a public release");
+  }
+  await sql`UPDATE publications SET visible_after = now() - interval '1 minute' WHERE article_id = ${id}`;
+  const released = JSON.parse((await get("/api/v1/selected/snapshot?limit=1000")).body);
+  assert.ok(released.items.some((item: { id: string }) => item.id === id));
+});

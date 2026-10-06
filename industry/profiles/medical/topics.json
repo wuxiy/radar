@@ -1,0 +1,144 @@
+{
+  "groups": [
+    {
+      "key": "field",
+      "name": "行业主题",
+      "blurb": "按医疗项目相关主题持续跟踪行业变化"
+    },
+    {
+      "key": "genre",
+      "name": "内容形态",
+      "blurb": "医院实践、采购信息、政策与标准"
+    }
+  ],
+  "topics": [
+    {
+      "slug": "medical-datasets",
+      "name": "医疗高质量数据集",
+      "group": "field",
+      "tags": [
+        "高质量数据集",
+        "数据标注",
+        "数据质控",
+        "数据验证"
+      ],
+      "definition": "跟踪病种、任务、模态、来源、生产加工、标注复核、质量评价、交付版本及使用条件。",
+      "related": []
+    },
+    {
+      "slug": "medical-governance",
+      "name": "医疗数据治理",
+      "group": "field",
+      "tags": [
+        "数据治理",
+        "隐私保护"
+      ],
+      "definition": "医院与区域平台的数据标准、质量、权限、主数据及持续治理。",
+      "related": []
+    },
+    {
+      "slug": "disease-databases",
+      "name": "专病数据库",
+      "group": "field",
+      "tags": [
+        "专病数据库"
+      ],
+      "definition": "专病数据范围、随访、临床标签、科研与训练任务的建设实践。",
+      "related": []
+    },
+    {
+      "slug": "medical-data-products",
+      "name": "医疗数据产品",
+      "group": "field",
+      "tags": [
+        "数据产品",
+        "可信数据空间"
+      ],
+      "definition": "数据集产品、平台服务、采购交付、应用验证及持续运营。",
+      "related": []
+    },
+    {
+      "slug": "medical-imaging",
+      "name": "医学影像与影像云",
+      "group": "field",
+      "tags": [
+        "影像系统",
+        "影像云"
+      ],
+      "definition": "医院影像系统、区域影像云与数据使用的行业变化。",
+      "related": []
+    },
+    {
+      "slug": "prescription-transfer",
+      "name": "电子处方流转",
+      "group": "field",
+      "tags": [
+        "电子处方"
+      ],
+      "definition": "区域电子处方开具、审核、流转、药事协同与平台建设。",
+      "related": []
+    },
+    {
+      "slug": "regional-health",
+      "name": "区域卫生平台",
+      "group": "field",
+      "tags": [
+        "区域卫生",
+        "互联互通"
+      ],
+      "definition": "区域卫生信息平台、业务协同和数据共享。",
+      "related": []
+    },
+    {
+      "slug": "result-recognition",
+      "name": "检查检验互认",
+      "group": "field",
+      "tags": [
+        "检查检验互认"
+      ],
+      "definition": "检查检验共享、互认流程、接口与适用条件。",
+      "related": []
+    },
+    {
+      "slug": "medical-ai",
+      "name": "医疗 AI",
+      "group": "field",
+      "tags": [
+        "医疗AI",
+        "医疗AI应用"
+      ],
+      "definition": "有明确医疗场景、应用证据与边界的 AI 产品及研究。",
+      "related": []
+    },
+    {
+      "slug": "hospital-practice",
+      "name": "医院实践",
+      "group": "genre",
+      "tags": [
+        "医院实践"
+      ],
+      "definition": "按原始材料核对发布主体、日期、事项阶段与证据范围。",
+      "related": []
+    },
+    {
+      "slug": "procurement",
+      "name": "采购信息",
+      "group": "genre",
+      "tags": [
+        "采购信息"
+      ],
+      "definition": "按原始材料核对发布主体、日期、事项阶段与证据范围。",
+      "related": []
+    },
+    {
+      "slug": "policy-standards",
+      "name": "政策与标准",
+      "group": "genre",
+      "tags": [
+        "政策/标准"
+      ],
+      "definition": "按原始材料核对发布主体、日期、事项阶段与证据范围。",
+      "related": []
+    }
+  ]
+}
