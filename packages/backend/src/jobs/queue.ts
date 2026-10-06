@@ -1,10 +1,13 @@
 // Job queue on PostgreSQL (pg-boss). Every queue is declared here with the data its jobs carry and its
 // retry policy: business code enqueues by name, the worker registers one handler per queue (jobs/*.ts),
 // and both sides are checked against JobData, so a payload cannot drift between producer and consumer.
+// A module declares its own queues (modules.ts ModuleQueue), typed by the queue in the same way.
 import { PgBoss, type SendOptions, type WorkOptions } from "pg-boss";
 import { config } from "../config.ts";
 import { sql, type Db } from "../db.ts";
 import { shutdownSignal } from "../lib/shutdown.ts";
+import { logError } from "../lib/log-error.ts";
+import { serverModules, type ModuleQueue } from "../modules.ts";
 export { shutdownSignal } from "../lib/shutdown.ts";
 
 let boss: PgBoss | null = null;
@@ -13,8 +16,8 @@ let starting: Promise<PgBoss> | null = null;
 export interface JobData {
   "content.analyze": { articleId: string; attemptTag?: string };
   "content.extract-body": { articleId: string };
-  "events.group": { articleId: string; signalOnly?: boolean; force?: boolean };
-  "events.digest": { storyId: number; afterCorrection?: boolean };
+  "events.group": { articleId: string; signalOnly?: boolean };
+  "events.digest": { storyId: number };
   "sources.fetch": { sourceId: string; force?: boolean };
   "sources.fetch-x": { key: string; sourceIds: string[] };
   "sources.mp": { sourceId: string; reason?: "schedule" | "manual" };
@@ -37,7 +40,7 @@ export const QUEUES = {
   prepareMedia: "media.prepare",
 } as const satisfies Record<string, QueueName>;
 
-type QueueOptions = NonNullable<Parameters<PgBoss["createQueue"]>[1]>;
+export type QueueOptions = NonNullable<Parameters<PgBoss["createQueue"]>[1]>;
 
 /** Queue definitions in one place; created on first use by any process. */
 const QUEUE_OPTIONS: Record<QueueName, QueueOptions> = {
@@ -59,13 +62,13 @@ export async function getBoss(): Promise<PgBoss> {
   if (boss) return boss;
   starting ??= (async () => {
     const b = new PgBoss({ connectionString: config.databaseUrl, max: 4, schema: "pgboss", application_name: "aihot-jobs" });
-    b.on("error", (err) => console.error("[pg-boss]", err));
+    b.on("error", (err) => console.error("[pg-boss]", logError(err)));
     try {
       await b.start();
       boss = b;
       return b;
     } catch (error) {
-      await b.stop({ graceful: false }).catch((cleanup) => console.error("[pg-boss] startup cleanup", cleanup));
+      await b.stop({ graceful: false }).catch((cleanup) => console.error("[pg-boss] startup cleanup", logError(cleanup)));
       throw error;
     } finally {
       // A temporary connection error must not leave every caller sharing a rejected promise.
@@ -75,7 +78,7 @@ export async function getBoss(): Promise<PgBoss> {
   return starting;
 }
 
-/** The longest single paid call (a translation batch, 180 s) plus margin; systemd waits longer. */
+/** The longest single paid call (a translation batch, 180 s) plus margin; whatever stops the worker (systemd, Docker) waits longer. */
 export const STOP_TIMEOUT_MS = 195_000;
 
 export async function stopBoss(): Promise<void> {
@@ -104,6 +107,13 @@ export async function enqueue<Q extends QueueName>(name: Q, data: JobData[Q], op
   return b.send(name, data, tx ? { ...options, db: queueDb(tx) } : options);
 }
 
+/** Enqueues a job on a module's queue. With `tx`, the job commits atomically with the caller's business write. */
+export async function enqueueOn<T extends object>(queue: ModuleQueue<T>, data: T, options: SendOptions = {}, tx?: Db): Promise<string | null> {
+  await ensureQueue(queue.name, queue.options);
+  const b = await getBoss();
+  return b.send(queue.name, data, tx ? { ...options, db: queueDb(tx) } : options);
+}
+
 /** A receipt release also wakes jobs (e.g. grouping/embeddings) that exhausted their queue retries.
  * The release must follow the failed attempt's start: it may arrive while that attempt is finishing,
  * but cannot keep reviving attempts started after it.
@@ -127,6 +137,17 @@ export async function retryReleasedReceiptJobs(): Promise<number> {
 export async function work<Q extends QueueName>(boss: PgBoss, name: Q, options: WorkOptions, handler: (data: JobData[Q]) => Promise<unknown>): Promise<void> {
   await ensureQueue(name);
   await boss.work<JobData[Q]>(name, options, async ([job]) => (job ? handler(job.data) : undefined));
+}
+
+/** The worker's handlers for the site's modules' queues. */
+export async function workModuleQueues(boss: PgBoss): Promise<void> {
+  for (const queue of serverModules().flatMap((m) => m.queues ?? [])) {
+    await ensureQueue(queue.name, queue.options);
+    await boss.work(queue.name, { ...queue.worker, perJobResults: true }, async (jobs) => {
+      const output = await queue.run(jobs.map(job => job.data) as never[]);
+      return jobs.map(job => ({ id: job.id, status: "completed" as const, output }));
+    });
+  }
 }
 
 // Scheduled task bookkeeping: every run leaves a row, so operators see the latest result.

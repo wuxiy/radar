@@ -2,8 +2,8 @@
 // union_ids / emails; opaque sessions stored hashed, and an audit trail for every manual change.
 // Development may impersonate an admin with DEV_AUTH_ROLE=admin; production refuses to start with it.
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
-import { config, credential } from "../config.ts";
 import { audit } from "../audit.ts";
+import { config, credential } from "../config.ts";
 import { sql } from "../db.ts";
 import { sha256 } from "../lib/ids.ts";
 
@@ -66,7 +66,7 @@ function sessionAuthorized(row: { auth_method: string | null; auth_binding: stri
     const c = row.auth_claims;
     if (!validClaims(c) || !feishuLoginConfigured() || c.appId !== credential("integrations", "FEISHU_LOGIN_APP_ID")) return false;
     if (!(c.unionId && config.adminUnionIds.includes(c.unionId)) && !(c.email && config.adminEmails.includes(c.email))) return false;
-    // jsonb 不保留键顺序，按登录时的固定顺序重建，且不使用可变用户资料替代原声明。
+    // jsonb does not keep key order: rebuild the claims in their sign-in order, never from mutable profile data.
     binding = sessionBinding("feishu", { appId: c.appId, unionId: c.unionId, email: c.email }, key);
   } else return false;
   return timingSafeEqual(Buffer.from(binding, "hex"), Buffer.from(row.auth_binding, "hex"));
@@ -90,7 +90,12 @@ export function parseCookies(header: string | undefined): Record<string, string>
   const out: Record<string, string> = {};
   for (const part of (header ?? "").split(";")) {
     const i = part.indexOf("=");
-    if (i > 0) out[part.slice(0, i).trim()] = decodeURIComponent(part.slice(i + 1).trim());
+    if (i <= 0) continue;
+    try {
+      out[part.slice(0, i).trim()] = decodeURIComponent(part.slice(i + 1).trim());
+    } catch {
+      // Other cookies need not be URI-encoded. A malformed value must not break admin sign-in.
+    }
   }
   return out;
 }
@@ -130,6 +135,15 @@ interface FeishuUser {
   name?: string;
 }
 
+/** JSON decoding errors may quote response bytes, which are private authentication data. */
+async function feishuJson<T>(response: Response, step: "token" | "profile"): Promise<T> {
+  try {
+    return await response.json() as T;
+  } catch {
+    throw new Error(`Feishu ${step} response is not valid JSON (HTTP ${response.status})`);
+  }
+}
+
 async function feishuUser(code: string): Promise<{ user: FeishuUser; appId: string }> {
   const appId = credential("integrations", "FEISHU_LOGIN_APP_ID");
   const appSecret = credential("integrations", "FEISHU_LOGIN_APP_SECRET");
@@ -140,13 +154,13 @@ async function feishuUser(code: string): Promise<{ user: FeishuUser; appId: stri
     body: new URLSearchParams({ grant_type: "authorization_code", client_id: appId, client_secret: appSecret, code, redirect_uri: CALLBACK_URL }),
     signal: AbortSignal.timeout(15_000),
   });
-  const token = (await tokenRes.json()) as { access_token?: string; error?: string };
-  if (!token.access_token) throw new Error(`Feishu token exchange failed: ${token.error ?? tokenRes.status}`);
+  const token = await feishuJson<{ access_token?: string }>(tokenRes, "token");
+  if (!token.access_token) throw new Error(`Feishu token exchange failed (HTTP ${tokenRes.status})`);
   const userRes = await fetch("https://passport.feishu.cn/suite/passport/oauth/userinfo", {
     headers: { authorization: `Bearer ${token.access_token}` },
     signal: AbortSignal.timeout(15_000),
   });
-  return { user: (await userRes.json()) as FeishuUser, appId };
+  return { user: await feishuJson<FeishuUser>(userRes, "profile"), appId };
 }
 
 export class LoginRejected extends Error {}
@@ -165,7 +179,7 @@ export async function completeLogin(code: string, state: string, stateCookie: st
   const given = unsign(state);
   if (!expected || !given || expected !== given) throw new LoginRejected("登录状态已失效，请重新登录");
   const returnTo = given.split("|")[1] ?? "/admin";
-  // 固定本次认证用过的密钥和应用，不能在异步认证或落库后换绑成新配置。
+  // Pin the key and app this sign-in used: a configuration change during the exchange must not rebind it.
   const loginKey = secret();
   const { user: u, appId } = await feishuUser(code);
   const emailClaim = u.enterprise_email ?? u.email;
@@ -215,7 +229,7 @@ export async function sessionPrincipal(cookieHeader: string | undefined): Promis
       WHERE s.id_hash = ${hash} AND s.expires_at > now()`;
     if (row) {
       if (sessionAuthorized(row)) return { userId: row.user_id, name: row.name ?? row.email ?? `admin:${row.user_id}`, csrf: row.csrf_token, dev: false };
-      // 已观察到失效的会话永久退出，之后恢复旧配置也不会重新授权这张 Cookie。
+      // A session seen to be invalid is gone for good: restoring the old configuration does not revive it.
       await sql`DELETE FROM admin_sessions WHERE id_hash = ${hash}`;
     }
   }

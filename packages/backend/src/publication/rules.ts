@@ -56,11 +56,26 @@ export function mayRedistribute(source: SourceFacts, bodyMode: "full" | "summary
  * Detail pages are noindex by default. Selected items are indexed automatically; an editor
  * can mark any other public page for indexing, or exclude a page, which then stays out.
  */
-export function isIndexable(p: { visibility: string; hasSummary: boolean; selected: boolean; seoIndexedAt: Date | null; seoExcludedAt: Date | null }): boolean {
-  return p.visibility === "public" && p.hasSummary && p.seoExcludedAt === null && (p.selected || p.seoIndexedAt !== null);
+export function isIndexable(p: { visibility: string; sourceMode: string; hasSummary: boolean; selected: boolean; seoIndexedAt: Date | null; seoExcludedAt: Date | null }): boolean {
+  return p.visibility === "public" && hasItemPage(p) && p.hasSummary && p.seoExcludedAt === null && (p.selected || p.seoIndexedAt !== null);
 }
 
 /** Display tags exclude internal entity markers. */
 export function displayTags(tags: string[]): string[] {
   return tags.filter((t) => !t.startsWith("entity:"));
+}
+
+/**
+ * The source name readers see. Admin names carry notes for editors in full-width brackets: the channel,
+ * what a feed keeps, a person's role or why the account is followed (「OpenAI：官网动态（RSS · 排除企业/客户案例）」,
+ * 「某媒体（热点 RSS）」, 「X：Clément Delangue（Hugging Face CEO） (@ClementDelangue)」). Readers get the name
+ * without them, and an X account its display name (its handle when the name is only a note). Every
+ * exit people read uses this, and search matches it; JSON fields keep the stored name, which programs
+ * may match.
+ */
+export function publicSourceName(name: string): string {
+  let bare = name;
+  while (/（[^（）]*）/.test(bare)) bare = bare.replace(/（[^（）]*）/g, " ");
+  const x = /^X[:：]\s*(.*?)\s*(?:\(@[^)]*\))?\s*$/.exec(bare);
+  return (x ? x[1]! : bare).replace(/\s+/g, " ").trim() || /@\w+/.exec(name)?.[0] || name.trim();
 }

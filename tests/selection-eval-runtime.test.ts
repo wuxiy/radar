@@ -1,4 +1,8 @@
-import { stub, tag } from "./setup.ts";
+// Selection evaluation (scripts/eval-selection.ts) on a gold file: it runs the site's own selection
+// route, shares one score among cases with the same score input without sharing their tier decisions,
+// counts every paid attempt, and never writes its report outside its folder.
+import { pointModels, stub, tag } from "./setup.ts";
+import { SELECTING_SCORE } from "./analysis-steps.ts";
 import assert from "node:assert/strict";
 import { after, test } from "node:test";
 import { execFile } from "node:child_process";
@@ -8,8 +12,13 @@ import path from "node:path";
 import { promisify } from "node:util";
 import { closeDb, sql } from "@aihot/backend/db";
 import { REPO_ROOT } from "@aihot/backend/config";
+import { tierThreshold } from "@aihot/backend/editorial/analyze";
 
 const exec = promisify(execFile);
+
+// Both cases get the score that selects at the pack's T1 threshold; T2 selects with it only where its
+// own threshold is no higher (industry/selection.ts).
+const T2_DECISION = tierThreshold("T2")! <= SELECTING_SCORE ? "select" : "reject";
 
 interface GoldRow {
   caseId: string;
@@ -48,22 +57,11 @@ async function evaluate(rows: GoldRow[], providers: { prefilter: string; score: 
   try {
     const gold = path.join(dir, "gold.jsonl");
     writeFileSync(gold, rows.map((item) => JSON.stringify(item)).join("\n"));
-    const args = ["scripts/eval-selection.ts", "--gold", gold, "--concurrency", "6", "--no-import"];
-    if (opts.split) args.push("--split", opts.split);
-    const { stdout } = await exec(process.execPath, args, {
-      cwd: REPO_ROOT,
-      env: {
-        ...process.env,
-        MODEL_CALLS_ENABLED: "true",
-        SCORE_MODEL: "glm-5.3-flash-selection",
-        PREFILTER_MODEL: "qwen3.7-flash",
-        DASHSCOPE_BASE_URL: `${providers.prefilter}/v1`,
-        DASHSCOPE_API_KEY: "test-key",
-        ZHIPU_BASE_URL: `${providers.score}/v1`,
-        ZHIPU_API_KEY: "test-key",
-      },
-      timeout: 20_000,
-    });
+    const args = ["scripts/eval-selection.ts", "--gold", gold, "--split", opts.split ?? "all", "--concurrency", "6", "--no-import"];
+    const env = { ...process.env, MODEL_CALLS_ENABLED: "true", SCORE_MODEL: "glm-5.3-flash-selection", PREFILTER_MODEL: "qwen3.7-flash" };
+    pointModels(providers.prefilter, ["qwen3.7-flash"], env);
+    pointModels(providers.score, ["glm-5.3-flash-selection"], env);
+    const { stdout } = await exec(process.execPath, args, { cwd: REPO_ROOT, env, timeout: 20_000 });
     reportPath = stdout.split("\n").find((line) => line.startsWith("report: "))?.slice(8);
     assert.ok(reportPath, stdout);
     const report = JSON.parse(readFileSync(reportPath, "utf8")) as {
@@ -98,6 +96,12 @@ after(async () => {
   await closeDb();
 });
 
+/** A run's metrics without its wall-clock time, which a slower machine can push past a second. */
+const metrics = (summary: object) => {
+  const { wallSeconds: _wall, ...rest } = summary as { wallSeconds?: number };
+  return rest;
+};
+
 test("default evaluation follows the production score route and shares duplicate score inputs without changing tier decisions", async (t) => {
   await withoutModelOverrides(async () => {
     const prefilter = await stub(() => ({
@@ -107,20 +111,20 @@ test("default evaluation follows the production score route and shares duplicate
     const score = await stub(async () => {
       await new Promise((resolve) => setTimeout(resolve, 100));
       return {
-        choices: [{ message: { content: JSON.stringify({ attentionScore: 70 }) } }],
+        choices: [{ message: { content: JSON.stringify({ attentionScore: SELECTING_SCORE }) } }],
         usage: { prompt_tokens: 100, completion_tokens: 20 },
       };
     });
     t.after(async () => { await Promise.all([prefilter.close(), score.close()]); });
 
     const marker = tag();
-    const rows = [row(`${marker}-t1`, marker, "T1", "select"), row(`${marker}-t2`, marker, "T2", "reject")];
+    const rows = [row(`${marker}-t1`, marker, "T1", "select"), row(`${marker}-t2`, marker, "T2", T2_DECISION)];
     const cold = await evaluate(rows, { prefilter: prefilter.url, score: score.url });
     const warm = await evaluate(rows, { prefilter: prefilter.url, score: score.url });
 
     assert.equal(cold.model, "glm-5.3-flash-selection", "no --models follows SCORE_MODEL / production routing");
-    assert.deepEqual(cold.summary, warm.summary, "cold and cached evaluations keep the same coverage and metrics");
-    assert.deepEqual(cold.cases.map((item) => item.decision), ["select", "reject"], "the shared score still uses each tier's threshold");
+    assert.deepEqual(metrics(cold.summary), metrics(warm.summary), "cold and cached evaluations keep the same coverage and metrics");
+    assert.deepEqual(cold.cases.map((item) => item.decision), ["select", T2_DECISION], "the shared score still uses each tier's threshold");
     assert.deepEqual([cold.summary.decisive, cold.summary.errors, cold.summary.accuracy], [2, 0, 1]);
     assert.deepEqual([prefilter.hits(), score.hits()], [2, 2], "two per-case prefilters, two shared score calls across both runs");
     assert.deepEqual([cold.summary.tokensIn, cold.summary.tokensOut], [220, 50], "shared score receipts count once");
@@ -134,13 +138,13 @@ test("a shared unusable score fails every matching case once, then retry usage i
       usage: { prompt_tokens: 10, completion_tokens: 5 },
     }));
     const score = await stub((hit) => ({
-      choices: [{ message: { content: hit === 1 ? "not JSON" : JSON.stringify({ attentionScore: 70 }) } }],
+      choices: [{ message: { content: hit === 1 ? "not JSON" : JSON.stringify({ attentionScore: SELECTING_SCORE }) } }],
       usage: { prompt_tokens: hit === 1 ? 100 : 300, completion_tokens: 20 },
     }));
     t.after(async () => { await Promise.all([prefilter.close(), score.close()]); });
 
     const marker = tag();
-    const rows = [row(`${marker}-t1`, marker, "T1", "select"), row(`${marker}-t2`, marker, "T2", "reject")];
+    const rows = [row(`${marker}-t1`, marker, "T1", "select"), row(`${marker}-t2`, marker, "T2", T2_DECISION)];
     const failed = await evaluate(rows, { prefilter: prefilter.url, score: score.url });
     assert.deepEqual([failed.summary.decisive, failed.summary.errors], [0, 2]);
     assert.equal(score.hits(), 1, "matching cases share the failed score result within one run");
