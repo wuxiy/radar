@@ -42,6 +42,12 @@ docker compose -f docker-compose.radar.yml up -d --build
 
 医疗外部补录使用 `POST /medical/api/ingest/items`，需要独立 `RADAR_MEDICAL_INGEST_TOKEN`，请求格式见 [信源文档](../sources.md)。数据库中的预算、来源设置和运行记录仍按行业分别管理。
 
+### AI 频道的 X 账号
+
+AI 信源配置 `industry/sources.json` 保留原有 18 个 RSS，并新增 `@yetone`（`x-yetone`）和 `@mattpocockuk`（`x-mattpocockuk`），共 20 个。两个账号按 T2 个人信源参与精选，搜索最新帖子并排除回复，站内和订阅全文均关闭；医疗配置不包含这两个账号。
+
+已有部署更新源码后执行 `npm run radar:setup`，只补上缺失的来源，不覆盖后台修改，也不会重复创建。X 使用现有 SocialData 采集器，需要 AI 后端的 `RADAR_AI_SOCIALDATA_API_KEY`，或者该频道私有 `collectors.env` 中的 `SOCIALDATA_API_KEY`；凭据不放在信源 JSON 中。自动采集还需要 AI 频道 `COLLECT_ENABLED=true` 和数据库 `socialdata` 请求预算，模型处理另需该频道模型配置和 `llm` 预算。新增配置不自动打开这些阀门或付费额度，不能据此认定已抓到真实帖子。配置方法及合并搜索节奏见 [X 信源](../sources.md#x_search)。
+
 ### 模型与请求预算
 
 医疗后端读取 `RADAR_MEDICAL_LLM_BASE_URL`、`RADAR_MEDICAL_LLM_API_KEY`、`RADAR_MEDICAL_LLM_MODEL`；启用时设置 `RADAR_MEDICAL_MODEL_CALLS_ENABLED=true` 并重启 API/worker。后台选用 `default` 时，各处理步骤共用医疗库的 `llm` 预算；预算是滚动一分钟、一小时、24 小时的请求次数，任一上限为 0 即停止发送，不能将它当作人民币费用上限。未启用的付费采集服务可将预算设为 0。

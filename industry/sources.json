@@ -365,6 +365,48 @@
       ],
       "site_fulltext": false,
       "syndicate_fulltext": false
+    },
+    {
+      "id": "x-yetone",
+      "name": "X：yetone (@yetone)",
+      "kind": "x_search",
+      "config": {
+        "query": "from:yetone -filter:replies",
+        "searchType": "Latest",
+        "_aihot": {
+          "initialBackfillLimit": 8
+        }
+      },
+      "tier": "T2",
+      "owner_entity_id": null,
+      "participation_mode": "editorial",
+      "interval_minutes": 30,
+      "tags": [
+        "个人"
+      ],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
+    },
+    {
+      "id": "x-mattpocockuk",
+      "name": "X：mattpocockuk (@mattpocockuk)",
+      "kind": "x_search",
+      "config": {
+        "query": "from:mattpocockuk -filter:replies",
+        "searchType": "Latest",
+        "_aihot": {
+          "initialBackfillLimit": 8
+        }
+      },
+      "tier": "T2",
+      "owner_entity_id": null,
+      "participation_mode": "editorial",
+      "interval_minutes": 30,
+      "tags": [
+        "个人"
+      ],
+      "site_fulltext": false,
+      "syndicate_fulltext": false
     }
   ]
 }
