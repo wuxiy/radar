@@ -36,7 +36,7 @@ try {
     const content = { sections: [{ label: "验收样本", items: [{ itemId: "radar_same_id", title: `REPORT-${PROFILE.id}`, summary: `REPORT-SUMMARY-${PROFILE.id}`, sourceUrl: `https://example.org/${PROFILE.id}/report`, sourceName: "验收样本来源" }] }], flashes: [] };
     await sql`INSERT INTO reports (kind, key, window_start, window_end, content, generated_at, origin)
       VALUES ('daily', ${date}, now() - interval '1 day', now(), ${sql.json(content)}, now(), 'manual') ON CONFLICT (kind, key) DO UPDATE SET content = EXCLUDED.content`;
-    console.log(JSON.stringify({ industry: PROFILE.id, date }));
+    console.log(`RADAR_FIXTURE_RESULT ${JSON.stringify({ industry: PROFILE.id, date })}`);
   } else if (process.argv[2] === "withdraw") {
     assert.equal(PROFILE.id, "medical");
     await visibility("radar_same_id", "withdrawn");
@@ -67,6 +67,6 @@ try {
     await boss.createQueue("radar.acceptance");
     const jobId = await boss.send("radar.acceptance", { industry: PROFILE.id, articleId: "radar_same_id" });
     assert.deepEqual((await boss.getJobById("radar.acceptance", jobId!))!.data, { industry: PROFILE.id, articleId: "radar_same_id" });
-    console.log(JSON.stringify({ industry: PROFILE.id, jobId, blocked: PROFILE.id === "ai", mockHits: hits }));
+    console.log(`RADAR_FIXTURE_RESULT ${JSON.stringify({ industry: PROFILE.id, jobId, blocked: PROFILE.id === "ai", mockHits: hits })}`);
   } else throw new Error("Unknown fixture action");
 } finally { await stopBoss(); await closeDb(); }

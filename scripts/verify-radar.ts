@@ -12,14 +12,21 @@ const base = process.env.SITE_URL!;
 const keep = process.argv.includes("--keep-fixtures");
 for (const industry of industries) if (!/_(test|ci)$/.test(new URL(industry.env.DATABASE_URL!).pathname)) throw new Error("Runtime acceptance writes fixtures: both databases must end in _test or _ci");
 async function fixture(industry: typeof industries[number], action: string) {
-  return run(process.execPath, [`--conditions=${industry.condition}`, "tests/radar-runtime-fixture.ts", action], { env: industry.env });
+  const result = await run(process.execPath, [`--conditions=${industry.condition}`, "tests/radar-runtime-fixture.ts", action], { env: industry.env });
+  // The queue also writes diagnostic JSON while it drains. Read only the fixture's result record.
+  if (action === "seed" || action === "isolation") {
+    const prefix = "RADAR_FIXTURE_RESULT ";
+    const line = result.stdout.split(/\r?\n/).find(line => line.startsWith(prefix));
+    assert.ok(line, `${industry.id} ${action}: fixture result missing`);
+    return JSON.parse(line.slice(prefix.length));
+  }
 }
 const request = (id: string, path: string, init: RequestInit = {}) => fetch(`${base}/${id}${path}`, { redirect: "manual", signal: AbortSignal.timeout(30_000), ...init });
 const connections = industries.map(industry => postgres(industry.env.DATABASE_URL!, { max: 1 }));
 const receipts = await Promise.all(connections.map(async db => Number((await db`SELECT count(*) n FROM receipts`)[0].n)));
 try {
   const seeded = await Promise.all(industries.map(industry => fixture(industry, "seed")));
-  const date = JSON.parse(seeded[0].stdout).date;
+  const date = seeded[0].date;
   for (const industry of industries) {
     const id = industry.id;
     const other = id === "ai" ? "medical" : "ai";
@@ -86,8 +93,7 @@ try {
   const after = await Promise.all(connections.map(async db => Number((await db`SELECT count(*) n FROM receipts`)[0].n)));
   assert.deepEqual(after, receipts, "reader requests must never create paid receipts");
   console.log("PASS withdrawal isolation, disabled medical modules, unknown industry, reader paid-receipt invariance");
-  const isolation = await Promise.all(industries.map(industry => fixture(industry, "isolation")));
-  const operations = isolation.map(result => JSON.parse(result.stdout));
+  const operations = await Promise.all(industries.map(industry => fixture(industry, "isolation")));
   for (const [index, db] of connections.entries()) {
     assert.equal(Number((await db`SELECT count(*) n FROM pgboss.job WHERE id = ${operations[1 - index].jobId}`)[0].n), 0, "a queue must not contain the other industry's job");
     assert.equal(Number((await db`SELECT count(*) n FROM receipts WHERE service = 'radar-acceptance-local-mock'`)[0].n), index === 0 ? 0 : 1);
