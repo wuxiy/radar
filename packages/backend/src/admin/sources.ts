@@ -99,11 +99,14 @@ export async function previewSource(draft: Pick<SourceRow, "id" | "kind" | "conf
     let reads = 0;
     for (const candidate of candidates) {
       if (detail.publishedAtAuthoritative === true) candidate.publishedAt = null;
-      if (candidate.publishedAt || reads >= Number(detail.maxFetches ?? 0)) continue;
+      const date = !candidate.publishedAt;
+      const title = detail.titleAuthoritative === true && !!(detail.titleSelector || detail.titleRegex);
+      if ((!date && !title) || reads >= Number(detail.maxFetches ?? 0)) continue;
       reads += 1;
       try {
-        const got = await fetchDetail(candidate.url, source, { date: true, title: false, summary: false });
-        candidate.publishedAt = got.publishedAt;
+        const got = await fetchDetail(candidate.url, source, { date, title, summary: false });
+        if (date) candidate.publishedAt = got.publishedAt;
+        if (got.title) candidate.title = got.title;
       } catch { /* An inaccessible detail cannot establish admission to the publication window. */ }
     }
   }

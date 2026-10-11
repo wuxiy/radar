@@ -1,5 +1,5 @@
 {
-  "$comment": "四个已确认来源均初始暂停。HIT 为 RSS；其他三站在稳定列表与日期逐条核验之前使用 external 补录，未配置未经验证的选择器。账号由用户补充。",
+  "$comment": "已核验公开行业站与四川成都官方来源。新安装仍初始暂停；NAS 经预览核验后启用。首次最多回填4条，固定发布下界为2026-10-01；不覆盖后台手工修改。旧external占位来源由运维暂停并保留历史。账号由用户补充。",
   "sources": [
     {
       "id": "rss-hit180",
@@ -23,52 +23,330 @@
       "enabled": false
     },
     {
-      "id": "external-chima",
-      "name": "CHIMA（外部补录）",
-      "kind": "external",
-      "config": {},
       "tier": "T1",
       "first_party": true,
       "participation_mode": "editorial",
-      "interval_minutes": 60,
+      "interval_minutes": 120,
       "tags": [
         "医疗行业"
       ],
       "site_fulltext": false,
       "syndicate_fulltext": false,
-      "enabled": false
+      "enabled": false,
+      "id": "web-chima",
+      "name": "CHIMA",
+      "kind": "web_list",
+      "config": {
+        "_aihot": {
+          "initialBackfillLimit": 4
+        },
+        "publishedAfter": "2026-10-01T00:00:00Z",
+        "fetchPublicContent": true,
+        "url": "https://www.chima.org.cn/Home",
+        "parseMode": "html",
+        "itemSelector": ".article_lb li",
+        "linkSelector": "a.title_type",
+        "allowUrlPrefixes": [
+          "https://www.chima.org.cn/Html/News/Articles/"
+        ],
+        "detail": {
+          "maxFetches": 8,
+          "titleSelector": "h1.article_title",
+          "titleAuthoritative": true,
+          "publishedAtSelector": ".sub_tit",
+          "publishedAtAuthoritative": true,
+          "publishedAtUtcOffset": "+08:00"
+        }
+      }
     },
     {
-      "id": "external-healthcare-informatics",
-      "name": "健康界信息化（外部补录）",
-      "kind": "external",
-      "config": {},
       "tier": "T2",
       "first_party": false,
       "participation_mode": "editorial",
-      "interval_minutes": 60,
+      "interval_minutes": 120,
       "tags": [
         "医疗行业"
       ],
       "site_fulltext": false,
       "syndicate_fulltext": false,
-      "enabled": false
+      "enabled": false,
+      "id": "json-healthcare-informatics",
+      "name": "健康界信息化",
+      "kind": "json_list",
+      "config": {
+        "_aihot": {
+          "initialBackfillLimit": 4
+        },
+        "publishedAfter": "2026-10-01T00:00:00Z",
+        "fetchPublicContent": true,
+        "url": "https://www.cn-healthcare.com/freezingapi/api/article/articlelist?data=%7B%22start%22%3A%220%22%2C%22size%22%3A%2230%22%2C%22wmstart%22%3A%220%22%2C%22flag%22%3A%222%22%2C%22arctype%22%3A%221087%22%7D",
+        "mode": "json_api",
+        "itemsPath": "data.datalist",
+        "titlePaths": [
+          "title"
+        ],
+        "urlTemplate": "https://www.cn-healthcare.com{raw:url}",
+        "summaryPaths": [
+          "description"
+        ],
+        "publishedAtPath": "pubdate",
+        "publishedAtUnit": "epoch_ms",
+        "allowUrlPrefixes": [
+          "https://www.cn-healthcare.com/article/",
+          "https://www.cn-healthcare.com/articlewm/"
+        ]
+      }
     },
     {
-      "id": "external-vbdata",
-      "name": "动脉网（外部补录）",
-      "kind": "external",
-      "config": {},
       "tier": "T2",
       "first_party": false,
       "participation_mode": "editorial",
-      "interval_minutes": 60,
+      "interval_minutes": 120,
       "tags": [
         "医疗行业"
       ],
       "site_fulltext": false,
       "syndicate_fulltext": false,
-      "enabled": false
+      "enabled": false,
+      "id": "web-vbdata",
+      "name": "动脉网",
+      "kind": "web_list",
+      "config": {
+        "_aihot": {
+          "initialBackfillLimit": 4
+        },
+        "publishedAfter": "2026-10-01T00:00:00Z",
+        "fetchPublicContent": true,
+        "url": "https://www.vbdata.cn/new",
+        "parseMode": "html",
+        "itemSelector": ".event-card:has(a[href])",
+        "linkSelector": "a[href]",
+        "titleSelector": ".title-content",
+        "publishedAtSelector": ".card-info span.spa2:not(.kw)",
+        "allowUrlPrefixes": [
+          "https://www.vbdata.cn/"
+        ],
+        "denyUrlPrefixes": [
+          "https://www.vbdata.cn/intelDetail/",
+          "https://www.vbdata.cn/company/"
+        ],
+        "detail": {
+          "maxFetches": 8,
+          "titleSelector": "h1",
+          "titleAuthoritative": true,
+          "publishedAtSelector": ".card-info",
+          "publishedAtAuthoritative": true,
+          "publishedAtUtcOffset": "+08:00"
+        }
+      }
+    },
+    {
+      "tier": "T1",
+      "first_party": true,
+      "participation_mode": "editorial",
+      "interval_minutes": 120,
+      "tags": [
+        "医疗行业",
+        "四川",
+        "政策与标准"
+      ],
+      "site_fulltext": false,
+      "syndicate_fulltext": false,
+      "enabled": false,
+      "id": "web-sichuan-health-documents",
+      "name": "四川省卫健委文件",
+      "kind": "web_list",
+      "config": {
+        "_aihot": {
+          "initialBackfillLimit": 4
+        },
+        "publishedAfter": "2026-10-01T00:00:00Z",
+        "fetchPublicContent": true,
+        "url": "https://wsjkw.sc.gov.cn/scwsjkw/wj1/wenjian.shtml",
+        "parseMode": "html",
+        "itemSelector": "li:has(a[href*=\"/scwsjkw/qtwj/20\"]), li:has(a[href*=\"/scwsjkw/xzgfxwj/20\"])",
+        "linkSelector": "a",
+        "publishedAtSelector": "span",
+        "allowUrlPrefixes": [
+          "https://wsjkw.sc.gov.cn/scwsjkw/qtwj/",
+          "https://wsjkw.sc.gov.cn/scwsjkw/xzgfxwj/"
+        ],
+        "detail": {
+          "maxFetches": 8,
+          "titleSelector": ".contText > p:first-child",
+          "titleAuthoritative": true
+        }
+      }
+    },
+    {
+      "tier": "T1",
+      "first_party": true,
+      "participation_mode": "editorial",
+      "interval_minutes": 120,
+      "tags": [
+        "医疗行业",
+        "四川",
+        "成都",
+        "医疗信息化"
+      ],
+      "site_fulltext": false,
+      "syndicate_fulltext": false,
+      "enabled": false,
+      "id": "web-huaxi-informatics",
+      "name": "华西医院信息与数据管理部",
+      "kind": "web_list",
+      "config": {
+        "_aihot": {
+          "initialBackfillLimit": 4
+        },
+        "publishedAfter": "2026-10-01T00:00:00Z",
+        "fetchPublicContent": true,
+        "url": "https://it.wchscu.cn/",
+        "parseMode": "html",
+        "itemSelector": ".nitem",
+        "linkSelector": "a.ttl",
+        "publishedAtRegex": "(\\d{4}/\\d{2}/\\d{2})",
+        "allowUrlPrefixes": [
+          "https://it.wchscu.cn/contents/135/"
+        ],
+        "detail": {
+          "maxFetches": 8,
+          "titleSelector": "h1.content-title",
+          "titleAuthoritative": true,
+          "publishedAtSelector": ".meta-date",
+          "publishedAtAuthoritative": true,
+          "publishedAtUtcOffset": "+08:00"
+        }
+      }
+    },
+    {
+      "tier": "T1",
+      "first_party": true,
+      "participation_mode": "editorial",
+      "interval_minutes": 120,
+      "tags": [
+        "医疗行业",
+        "四川",
+        "成都",
+        "采购"
+      ],
+      "site_fulltext": false,
+      "syndicate_fulltext": false,
+      "enabled": false,
+      "id": "web-huaxi-procurement",
+      "name": "华西医院采购公告",
+      "kind": "web_list",
+      "config": {
+        "_aihot": {
+          "initialBackfillLimit": 4
+        },
+        "publishedAfter": "2026-10-01T00:00:00Z",
+        "fetchPublicContent": true,
+        "url": "https://www.wchscu.cn/public/notice/tender.html",
+        "parseMode": "html",
+        "itemSelector": ".item:has(a[href*=\"/public/notice/tender/\"])",
+        "linkSelector": "a",
+        "titleSelector": ".s1",
+        "publishedAtSelector": ".s2",
+        "allowUrlPrefixes": [
+          "https://www.wchscu.cn/public/notice/tender/"
+        ],
+        "ingestNoiseFilter": {
+          "dropMarkersTitleOnly": [
+            "空调",
+            "食堂",
+            "复印纸",
+            "洗衣机",
+            "物业",
+            "保洁",
+            "家具",
+            "医用耗材",
+            "检验试剂"
+          ],
+          "keepIfMatches": [
+            "信息化",
+            "数据",
+            "信息系统",
+            "影像系统",
+            "电子处方",
+            "人工智能",
+            "数字",
+            "软件",
+            "平台"
+          ]
+        },
+        "detail": {
+          "maxFetches": 8,
+          "titleSelector": ".xxy3 > .tit .s1",
+          "titleAuthoritative": true,
+          "publishedAtSelector": ".xxy3 > .tit .s2",
+          "publishedAtAuthoritative": true,
+          "publishedAtUtcOffset": "+08:00"
+        }
+      }
+    },
+    {
+      "tier": "T1",
+      "first_party": true,
+      "participation_mode": "editorial",
+      "interval_minutes": 120,
+      "tags": [
+        "医疗行业",
+        "四川",
+        "成都",
+        "采购"
+      ],
+      "site_fulltext": false,
+      "syndicate_fulltext": false,
+      "enabled": false,
+      "id": "web-chengdu-phcc-procurement",
+      "name": "成都市公卫中心采购公告",
+      "kind": "web_list",
+      "config": {
+        "_aihot": {
+          "initialBackfillLimit": 4
+        },
+        "publishedAfter": "2026-10-01T00:00:00Z",
+        "fetchPublicContent": true,
+        "url": "https://www.phcc120.com/biaozmt.aspx?category_id=31&page=0",
+        "parseMode": "html",
+        "itemSelector": "li:has(a[href*=\"news_show.aspx\"])",
+        "linkSelector": "a",
+        "publishedAtSelector": "span",
+        "allowUrlPrefixes": [
+          "https://www.phcc120.com/news_show.aspx"
+        ],
+        "ingestNoiseFilter": {
+          "dropMarkersTitleOnly": [
+            "空调",
+            "食堂",
+            "复印纸",
+            "洗衣机",
+            "物业",
+            "保洁",
+            "家具",
+            "医用耗材",
+            "检验试剂"
+          ],
+          "keepIfMatches": [
+            "信息化",
+            "数据",
+            "信息系统",
+            "影像系统",
+            "电子处方",
+            "人工智能",
+            "数字",
+            "软件",
+            "平台"
+          ]
+        },
+        "detail": {
+          "maxFetches": 8,
+          "publishedAtSelector": ".pnews-detaTop .date",
+          "publishedAtAuthoritative": true,
+          "publishedAtUtcOffset": "+08:00"
+        }
+      }
     }
   ]
 }

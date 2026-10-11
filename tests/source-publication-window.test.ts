@@ -62,3 +62,20 @@ for (const mode of ["undated", "authoritative"]) {
     headlineSuffix = "";
   });
 }
+
+
+test("dated preview uses the authoritative article headline, matching collection rather than a truncated listing", async () => {
+  const id = `test-preview-headline-${T}`;
+  const sourceConfig = {
+    url: `${base}/list/preview`, itemSelector: "li", linkSelector: "a", publishedAfter: boundary,
+    detail: { maxFetches: 4, publishedAtSelector: 'meta[name="original-publication"]', publishedAtAuthoritative: true, titleSelector: "h1", titleAuthoritative: true },
+  };
+  const preview = await previewSource({ id, kind: "web_list", config: sourceConfig });
+  assert.equal(preview.count, 1);
+  assert.equal(preview.items[0]!.title, "Original article");
+  await sql`INSERT INTO sources (id, name, kind, config, tier, participation_mode, cursor, next_fetch_at)
+    VALUES (${id}, ${id}, 'web_list', ${sql.json(sourceConfig)}, 'T1', 'editorial', ${sql.json({ initializedAt: new Date(now).toISOString() })}, '2100-01-01')`;
+  assert.equal((await collectSource(id, { force: true })).status, "ok");
+  const [article] = await sql`SELECT title FROM articles WHERE source_id = ${id}`;
+  assert.equal(article!.title, preview.items[0]!.title);
+});
