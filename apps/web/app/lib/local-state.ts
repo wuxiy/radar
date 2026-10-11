@@ -11,6 +11,7 @@ export const KEYS = {
   starred: `${namespace}-starred-items`,
   read: `${namespace}-read-items`,
   theme: "aihot-theme",
+  font: "aihot-font",
   changelogSeen: `${namespace}-changelog-seen-version`,
   feedbackDraft: `${namespace}-feedback-draft-v1`,
   recentSearches: `${namespace}-recent-searches`,
@@ -94,6 +95,7 @@ function emit(key?: string) {
 }
 function onStorage(event: StorageEvent) {
   if (event.storageArea && event.storageArea !== storage("local")) return;
+  if (event.key === null || event.key === KEYS.font) unsavedFont = undefined;
   if (event.key === null) cache.clear();
   else cache.delete(event.key);
   // Clear the snapshot once, before notifying all cards. Each key is parsed at most once.
@@ -115,6 +117,7 @@ function subscribeKey(key: string) {
 const subscribeStarred = subscribeKey(KEYS.starred);
 const subscribeRead = subscribeKey(KEYS.read);
 const subscribeTheme = subscribeKey(KEYS.theme);
+const subscribeFont = subscribeKey(KEYS.font);
 const subscribeChangelog = subscribeKey(KEYS.changelogSeen);
 const subscribeRecentSearches = subscribeKey(KEYS.recentSearches);
 
@@ -233,7 +236,20 @@ export function markRead(id: string) {
   });
 }
 
-// theme
+// appearance
+export type FontPreference = "browser" | null;
+let unsavedFont: FontPreference | undefined;
+
+export function getFontPreference(): FontPreference {
+  return unsavedFont !== undefined ? unsavedFont : readRaw(KEYS.font) === "browser" ? "browser" : null;
+}
+
+export function setFontPreference(pref: FontPreference) {
+  // A denied write still leaves the choice usable in this tab, like an unsaved preference.
+  unsavedFont = writeRaw(KEYS.font, pref) ? undefined : pref;
+  emit(KEYS.font);
+}
+
 export type ThemePreference = "light" | "dark" | null;
 
 export function getThemePreference(): ThemePreference {
@@ -271,8 +287,12 @@ export function applyTheme(theme: "light" | "dark", followsSystem: boolean) {
  * Keeps the page on the reader's theme after the first paint: a choice made in another tab or by an
  * import, and the system switching between light and dark while the page follows it.
  */
-export function useThemeSync() {
+export function useAppearanceSync() {
   const pref = useThemePreference();
+  const font = useFontPreference();
+  useEffect(() => {
+    document.documentElement.setAttribute("data-font", getFontPreference() ?? "system");
+  }, [font]);
   useEffect(() => {
     // Read the stored choice itself: during hydration the hook still reports the server's "none".
     const current = getThemePreference();
@@ -290,8 +310,8 @@ export function useThemeSync() {
   }, [pref]);
 }
 
-/** Inline script run before paint so the first frame already has the reader's theme. */
-export const THEME_BOOT_SCRIPT = `(function(){try{var t=localStorage.getItem('${KEYS.theme}');if(t==='light'||t==='dark'){var c=t==='dark'?'${THEME_COLOR.dark}':'${THEME_COLOR.light}';document.querySelectorAll('meta[name="theme-color"]').forEach(function(m){m.content=c})}else{t=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'}document.documentElement.setAttribute('data-theme',t)}catch(e){document.documentElement.setAttribute('data-theme','light')}})();`;
+/** Inline script run before paint so the first frame already has the reader's appearance. */
+export const APPEARANCE_BOOT_SCRIPT = `(function(){var f='system';try{f=localStorage.getItem('${KEYS.font}')==='browser'?'browser':'system'}catch(e){}document.documentElement.setAttribute('data-font',f);try{var t=localStorage.getItem('${KEYS.theme}');if(t==='light'||t==='dark'){var c=t==='dark'?'${THEME_COLOR.dark}':'${THEME_COLOR.light}';document.querySelectorAll('meta[name="theme-color"]').forEach(function(m){m.content=c})}else{t=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'}document.documentElement.setAttribute('data-theme',t)}catch(e){document.documentElement.setAttribute('data-theme','light')}})();`;
 
 // changelog red dot
 function getChangelogSeen(): string | null {
@@ -347,11 +367,12 @@ export interface ExportBundle {
   starred: LocalStarredItem[];
   read: string[];
   theme: "light" | "dark" | "auto" | null;
+  font?: "system" | "browser";
 }
 
 export function exportBundle(): ExportBundle {
   const pref = getThemePreference();
-  return { ...(PROFILE.basePath ? { industry: PROFILE.id } : {}), version: 1, starred: getStarred(), read: getReadIds(), theme: pref ?? "auto" };
+  return { ...(PROFILE.basePath ? { industry: PROFILE.id } : {}), version: 1, starred: getStarred(), read: getReadIds(), theme: pref ?? "auto", font: getFontPreference() ?? "system" };
 }
 
 export interface ImportReport {
@@ -360,11 +381,12 @@ export interface ImportReport {
   readAdded: number;
   readSkipped: number;
   themeApplied: boolean;
+  fontApplied: boolean;
   /** The stars were saved but the read marks could not be (storage full or unavailable). */
   readFailed: boolean;
 }
 
-/** Merge: existing stars are not overwritten, read ids are unioned, theme only if unset. */
+/** Merge: existing stars are not overwritten, read ids are unioned, appearance only if unset. */
 export function importBundle(text: string): ImportReport {
   if (text.length > IMPORT_MAX_CHARS) throw new Error("文件过大（上限 2,000,000 字符）");
   let data: unknown;
@@ -381,6 +403,7 @@ export function importBundle(text: string): ImportReport {
     starred: Array.isArray(d.starred) ? d.starred : [],
     read: Array.isArray(d.read) ? d.read : [],
     theme: d.theme ?? null,
+    font: d.font ?? null,
   });
 }
 
@@ -395,7 +418,7 @@ function starredUnreadable(): boolean {
   }
 }
 
-function mergeLocalData(incoming: { starred: unknown[]; read: unknown[]; theme: unknown }): ImportReport {
+function mergeLocalData(incoming: { starred: unknown[]; read: unknown[]; theme: unknown; font?: unknown }): ImportReport {
   return editLocalData(() => {
     // The reader's own data stays recoverable (export it, or fix it) rather than replaced by the import.
     if (starredUnreadable()) throw new Error("这台设备上已有的收藏数据无法读取，为避免覆盖，这次没有导入。");
@@ -434,9 +457,10 @@ function mergeLocalData(incoming: { starred: unknown[]; read: unknown[]; theme: 
     if (!getThemePreference() && (incoming.theme === "light" || incoming.theme === "dark")) {
       themeApplied = writeRaw(KEYS.theme, incoming.theme);
     }
+    const fontApplied = !getFontPreference() && incoming.font === "browser" && writeRaw(KEYS.font, "browser");
     cache.clear();
     emit();
-    return { starredAdded: accepted.length, starredSkipped, readAdded: readFailed ? 0 : Math.min(readAdditions.length, readRoom), readSkipped, themeApplied, readFailed };
+    return { starredAdded: accepted.length, starredSkipped, readAdded: readFailed ? 0 : Math.min(readAdditions.length, readRoom), readSkipped, themeApplied, fontApplied, readFailed };
   });
 }
 
@@ -461,6 +485,10 @@ export function useReadSet(): Set<string> {
 
 export function useThemePreference(): ThemePreference {
   return useSyncExternalStore(subscribeTheme, getThemePreference, () => null);
+}
+
+export function useFontPreference(): FontPreference {
+  return useSyncExternalStore(subscribeFont, getFontPreference, () => null);
 }
 
 export function useChangelogSeen(): string | null {

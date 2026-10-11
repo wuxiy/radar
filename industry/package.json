@@ -16,6 +16,10 @@
       "medical": "./profiles/medical/profile.ts",
       "radar-ai": "./profiles/ai/profile.ts",
       "default": "./profile.ts"
+    },
+    "./wording": {
+      "medical": "./profiles/medical/wording.ts",
+      "default": "./wording.ts"
     }
   }
 }
