@@ -127,6 +127,8 @@ AI 的 `industry/sources.json` 新增 `x-yetone` 与 `x-mattpocockuk`；两者�
 
 本机运行仅使用独立 `_test` 库，采集、模型及外部推送阀门关闭；测试调用仅连接本机假服务。日志与私有测试配置位于被忽略的 `.data/upstream-sync-20261007/`。本轮是本地源码同步，未升级 NAS，也未配置真实 SocialData 凭据或开启 AI 付费采集；实际采集条件见 [双行业运行说明](docs/radar/run.md#ai-频道的-x-账号)。
 
+**随后 NAS 启用结果（2026-10-07）：** 使用者提供 SocialData 凭据并确认 AI 的 SocialData、模型各 100 次/滚动 24 小时。NAS 已快进至 `d012245`，原生安装、双行业构建和初始化成功；两库仍各 60 条迁移，AI 补入 2 个 X 来源，医疗新增 0。真实采集各保存 8 条，并各完成中文摘要发布；三服务 active，两频道 smoke 各 30/30，医疗来源/模型/预算及认证凭据核对保留。此阶段为正式运行验收，详见 [AI X 信源启用验收](docs/radar/ai-x-activation-acceptance.md)。
+
 ## 贡献记录与上游 PR
 
 GitHub 的 commit contributions 要求仓库不是 Fork、提交进入默认分支或 `gh-pages`，且作者邮箱已关联 GitHub 账号；符合条件后可能需要等待最多 24 小时显示。见 [GitHub 贡献记录说明](https://docs.github.com/en/account-and-profile/how-tos/contribution-settings/troubleshooting-missing-contributions)。

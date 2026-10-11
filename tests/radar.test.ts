@@ -4,16 +4,60 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { createServer } from "node:http";
 import { once } from "node:events";
+import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import { industryEnvironments } from "../deploy/radar/config.ts";
 import { createGateway } from "../deploy/radar/gateway.ts";
 
 const env = { SITE_URL: "http://localhost:3000", RADAR_AI_DATABASE_URL: "postgres://user:unused@localhost/radar_ai_test", RADAR_MEDICAL_DATABASE_URL: "postgres://user:unused@localhost/radar_medical_test" };
+
+test("unified source management is served without either industry and cannot expose private files", async () => {
+  const directory = await mkdtemp(path.join(tmpdir(), "radar-management-"));
+  await mkdir(path.join(directory, "assets"));
+  await writeFile(path.join(directory, "index.html"), "<!doctype html><title>信源管理 · Radar</title>");
+  await writeFile(path.join(directory, "assets", "main-abc.js"), "console.log('management');");
+  await writeFile(path.join(directory, "private.env"), "must-not-be-served");
+  const gateway = createGateway({ ai: 1, medical: 2 }, false, "http://localhost", directory);
+  gateway.listen(0, "127.0.0.1"); await once(gateway, "listening");
+  const origin = `http://127.0.0.1:${(gateway.address() as { port: number }).port}`;
+  try {
+    const entry = await fetch(`${origin}/manage`, { redirect: "manual" });
+    assert.equal(entry.headers.get("location"), "/manage/sources?industry=medical");
+    for (const industry of ["ai", "medical"]) {
+      const page = await fetch(`${origin}/manage/sources/new?industry=${industry}`);
+      assert.equal(page.status, 200); assert.match(await page.text(), /信源管理/);
+      assert.match(page.headers.get("cache-control")!, /no-store/);
+      assert.match(page.headers.get("x-robots-tag")!, /noindex/);
+    }
+    const script = await fetch(`${origin}/manage/assets/main-abc.js`);
+    assert.equal(script.status, 200); assert.match(script.headers.get("cache-control")!, /immutable/);
+    assert.equal((await fetch(`${origin}/manage/sources`, { method: "HEAD" })).status, 200);
+    assert.equal((await fetch(`${origin}/manage/sources`, { method: "POST" })).status, 405);
+    for (const pathname of ["/manage/private.env", "/manage/api/admin/sources", "/manage/assets/%2e%2e/private.env", "/manage/sources?industry=other"]) {
+      assert.equal((await fetch(origin + pathname)).status, 404, pathname);
+    }
+    assert.equal((await fetch(`${origin}/medical/api/admin/me`)).status, 503, "never falls back to AI");
+  } finally {
+    await new Promise<void>(resolve => gateway.close(() => resolve()));
+    await rm(directory, { recursive: true });
+  }
+});
 
 test("Radar requires distinct explicit databases and distinct internal ports", () => {
   assert.throws(() => industryEnvironments({ ...env, RADAR_MEDICAL_DATABASE_URL: undefined }), /required/);
   assert.throws(() => industryEnvironments({ ...env, RADAR_MEDICAL_DATABASE_URL: env.RADAR_AI_DATABASE_URL }), /different logical databases/);
   assert.throws(() => industryEnvironments({ ...env, RADAR_AI_WEB_PORT: "3002" }), /different internal ports/);
   assert.throws(() => industryEnvironments({ ...env, SITE_URL: "http://localhost/ai" }), /public origin/);
+});
+
+test("each industry's login returns to unified management only for that industry", async () => {
+  const run = promisify(execFile);
+  for (const [condition, industry, other] of [["radar-ai", "ai", "medical"], ["medical", "medical", "ai"]]) {
+    const probe = `import{safeReturn}from'@aihot/backend/admin/auth';console.log(JSON.stringify({own:safeReturn('/manage/sources/new?industry=${industry}'),other:safeReturn('/manage/sources?industry=${other}'),legacy:safeReturn('/${industry}/admin/sources'),invalid:safeReturn('/manage/settings?industry=${industry}')}));`;
+    const output = JSON.parse((await run(process.execPath, [`--conditions=${condition}`, "--input-type=module", "-e", probe], { env: { ...process.env, MODEL_CALLS_ENABLED: "false", COLLECT_ENABLED: "false" } })).stdout);
+    assert.deepEqual(output, { own: `/manage/sources/new?industry=${industry}`, other: "/admin", legacy: "/admin/sources", invalid: "/admin" });
+  }
 });
 
 test("Radar isolates files, flags, model overrides and canonical origins", () => {

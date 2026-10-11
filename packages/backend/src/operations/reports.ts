@@ -20,7 +20,7 @@ export async function sourceHealthWeekly(now = Date.now()) {
              count(*) FILTER (WHERE enabled AND health = 'failing')::int AS failing,
              count(*) FILTER (WHERE enabled AND health = 'degraded')::int AS degraded,
              count(*) FILTER (WHERE created_at >= ${since})::int AS added
-      FROM sources`,
+      FROM sources WHERE deleted_at IS NULL`,
     sql<{ week: number; prev: number; selected: number }[]>`
       SELECT count(*) FILTER (WHERE discovered_at >= ${since})::int AS week,
              count(*) FILTER (WHERE discovered_at >= ${before} AND discovered_at < ${since})::int AS prev,

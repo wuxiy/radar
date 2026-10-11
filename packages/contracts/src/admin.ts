@@ -45,6 +45,11 @@ export interface AdminAudit {
 
 // Sources
 
+export interface AdminSourceDeleted {
+  id: string;
+  retainedArticles: number;
+}
+
 export interface AdminSourceRow {
   id: string;
   name: string;

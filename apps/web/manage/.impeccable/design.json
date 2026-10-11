@@ -1,0 +1,368 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-07T17:20:19Z",
+  "title": "Design System: Radar 信源管理",
+  "extensions": {
+    "colorMeta": {
+      "accent": {
+        "role": "primary",
+        "displayName": "青色强调",
+        "tonalRamp": [
+          "oklch(15.00% 0.07651 207.09)",
+          "oklch(26.43% 0.07651 207.09)",
+          "oklch(37.86% 0.07651 207.09)",
+          "oklch(49.29% 0.07651 207.09)",
+          "oklch(60.71% 0.07651 207.09)",
+          "oklch(72.14% 0.07651 207.09)",
+          "oklch(83.57% 0.07651 207.09)",
+          "oklch(95.00% 0.07651 207.09)"
+        ]
+      },
+      "accent-soft": {
+        "role": "primary",
+        "displayName": "浅青状态底",
+        "tonalRamp": [
+          "oklch(15.00% 0.07651 207.09 / 0.08)",
+          "oklch(26.43% 0.07651 207.09 / 0.08)",
+          "oklch(37.86% 0.07651 207.09 / 0.08)",
+          "oklch(49.29% 0.07651 207.09 / 0.08)",
+          "oklch(60.71% 0.07651 207.09 / 0.08)",
+          "oklch(72.14% 0.07651 207.09 / 0.08)",
+          "oklch(83.57% 0.07651 207.09 / 0.08)",
+          "oklch(95.00% 0.07651 207.09 / 0.08)"
+        ]
+      },
+      "bg": {
+        "role": "neutral",
+        "displayName": "纸色",
+        "tonalRamp": [
+          "oklch(15.00% 0.00411 91.45)",
+          "oklch(26.43% 0.00411 91.45)",
+          "oklch(37.86% 0.00411 91.45)",
+          "oklch(49.29% 0.00411 91.45)",
+          "oklch(60.71% 0.00411 91.45)",
+          "oklch(72.14% 0.00411 91.45)",
+          "oklch(83.57% 0.00411 91.45)",
+          "oklch(95.00% 0.00411 91.45)"
+        ]
+      },
+      "bg-sunk": {
+        "role": "neutral",
+        "displayName": "下沉纸色",
+        "tonalRamp": [
+          "oklch(15.00% 0.00530 106.50)",
+          "oklch(26.43% 0.00530 106.50)",
+          "oklch(37.86% 0.00530 106.50)",
+          "oklch(49.29% 0.00530 106.50)",
+          "oklch(60.71% 0.00530 106.50)",
+          "oklch(72.14% 0.00530 106.50)",
+          "oklch(83.57% 0.00530 106.50)",
+          "oklch(95.00% 0.00530 106.50)"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "白色面板",
+        "tonalRamp": [
+          "oklch(15.00% 0.00000 0.00)",
+          "oklch(26.43% 0.00000 0.00)",
+          "oklch(37.86% 0.00000 0.00)",
+          "oklch(49.29% 0.00000 0.00)",
+          "oklch(60.71% 0.00000 0.00)",
+          "oklch(72.14% 0.00000 0.00)",
+          "oklch(83.57% 0.00000 0.00)",
+          "oklch(95.00% 0.00000 0.00)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "主墨色",
+        "tonalRamp": [
+          "oklch(15.00% 0.01780 234.61)",
+          "oklch(26.43% 0.01780 234.61)",
+          "oklch(37.86% 0.01780 234.61)",
+          "oklch(49.29% 0.01780 234.61)",
+          "oklch(60.71% 0.01780 234.61)",
+          "oklch(72.14% 0.01780 234.61)",
+          "oklch(83.57% 0.01780 234.61)",
+          "oklch(95.00% 0.01780 234.61)"
+        ]
+      },
+      "ink-2": {
+        "role": "neutral",
+        "displayName": "内容墨色",
+        "tonalRamp": [
+          "oklch(15.00% 0.01901 229.61)",
+          "oklch(26.43% 0.01901 229.61)",
+          "oklch(37.86% 0.01901 229.61)",
+          "oklch(49.29% 0.01901 229.61)",
+          "oklch(60.71% 0.01901 229.61)",
+          "oklch(72.14% 0.01901 229.61)",
+          "oklch(83.57% 0.01901 229.61)",
+          "oklch(95.00% 0.01901 229.61)"
+        ]
+      },
+      "ink-3": {
+        "role": "neutral",
+        "displayName": "说明墨色",
+        "tonalRamp": [
+          "oklch(15.00% 0.01759 229.26)",
+          "oklch(26.43% 0.01759 229.26)",
+          "oklch(37.86% 0.01759 229.26)",
+          "oklch(49.29% 0.01759 229.26)",
+          "oklch(60.71% 0.01759 229.26)",
+          "oklch(72.14% 0.01759 229.26)",
+          "oklch(83.57% 0.01759 229.26)",
+          "oklch(95.00% 0.01759 229.26)"
+        ]
+      },
+      "ink-4": {
+        "role": "neutral",
+        "displayName": "元数据墨色",
+        "tonalRamp": [
+          "oklch(15.00% 0.01647 224.70)",
+          "oklch(26.43% 0.01647 224.70)",
+          "oklch(37.86% 0.01647 224.70)",
+          "oklch(49.29% 0.01647 224.70)",
+          "oklch(60.71% 0.01647 224.70)",
+          "oklch(72.14% 0.01647 224.70)",
+          "oklch(83.57% 0.01647 224.70)",
+          "oklch(95.00% 0.01647 224.70)"
+        ]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "细线",
+        "tonalRamp": [
+          "oklch(15.00% 0.00670 160.06)",
+          "oklch(26.43% 0.00670 160.06)",
+          "oklch(37.86% 0.00670 160.06)",
+          "oklch(49.29% 0.00670 160.06)",
+          "oklch(60.71% 0.00670 160.06)",
+          "oklch(72.14% 0.00670 160.06)",
+          "oklch(83.57% 0.00670 160.06)",
+          "oklch(95.00% 0.00670 160.06)"
+        ]
+      },
+      "line-strong": {
+        "role": "neutral",
+        "displayName": "控件边界",
+        "tonalRamp": [
+          "oklch(15.00% 0.01020 164.84)",
+          "oklch(26.43% 0.01020 164.84)",
+          "oklch(37.86% 0.01020 164.84)",
+          "oklch(49.29% 0.01020 164.84)",
+          "oklch(60.71% 0.01020 164.84)",
+          "oklch(72.14% 0.01020 164.84)",
+          "oklch(83.57% 0.01020 164.84)",
+          "oklch(95.00% 0.01020 164.84)"
+        ]
+      },
+      "hot": {
+        "role": "status",
+        "displayName": "警示红",
+        "tonalRamp": [
+          "oklch(15.00% 0.15399 32.86)",
+          "oklch(26.43% 0.15399 32.86)",
+          "oklch(37.86% 0.15399 32.86)",
+          "oklch(49.29% 0.15399 32.86)",
+          "oklch(60.71% 0.15399 32.86)",
+          "oklch(72.14% 0.15399 32.86)",
+          "oklch(83.57% 0.15399 32.86)",
+          "oklch(95.00% 0.15399 32.86)"
+        ]
+      },
+      "amber": {
+        "role": "status",
+        "displayName": "提示琥珀",
+        "tonalRamp": [
+          "oklch(15.00% 0.11075 75.77)",
+          "oklch(26.43% 0.11075 75.77)",
+          "oklch(37.86% 0.11075 75.77)",
+          "oklch(49.29% 0.11075 75.77)",
+          "oklch(60.71% 0.11075 75.77)",
+          "oklch(72.14% 0.11075 75.77)",
+          "oklch(83.57% 0.11075 75.77)",
+          "oklch(95.00% 0.11075 75.77)"
+        ]
+      },
+      "ok": {
+        "role": "status",
+        "displayName": "健康绿",
+        "tonalRamp": [
+          "oklch(15.00% 0.09312 162.39)",
+          "oklch(26.43% 0.09312 162.39)",
+          "oklch(37.86% 0.09312 162.39)",
+          "oklch(49.29% 0.09312 162.39)",
+          "oklch(60.71% 0.09312 162.39)",
+          "oklch(72.14% 0.09312 162.39)",
+          "oklch(83.57% 0.09312 162.39)",
+          "oklch(95.00% 0.09312 162.39)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "headline": {
+        "displayName": "页面标题",
+        "purpose": "管理页面任务标题；窄屏减至 22px。"
+      },
+      "title": {
+        "displayName": "面板标题",
+        "purpose": "共享面板的局部标题。"
+      },
+      "body": {
+        "displayName": "正文",
+        "purpose": "系统字体与基础行高。"
+      },
+      "control": {
+        "displayName": "操作文字",
+        "purpose": "按钮与行业切换。"
+      },
+      "label": {
+        "displayName": "字段标签",
+        "purpose": "表单中的字段名称。"
+      },
+      "mono": {
+        "displayName": "结构化数据",
+        "purpose": "JSON 配置与来源 ID。"
+      }
+    },
+    "shadows": [],
+    "motion": [
+      {
+        "name": "reason-dialog",
+        "value": "220ms cubic-bezier(0.25, 1, 0.5, 1)",
+        "purpose": "既有原因弹窗的入场和退出。"
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "641px"
+      },
+      {
+        "name": "md",
+        "value": "768px"
+      },
+      {
+        "name": "lg",
+        "value": "961px"
+      },
+      {
+        "name": "xl",
+        "value": "1280px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "主按钮",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "创建、保存与主要确认。",
+      "html": "<button class=\"ds-btn-primary\">主按钮</button>",
+      "css": ".ds-btn-primary{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:36px;padding:0 14px;border:0;border-radius:var(--radius-control, 8px);font:500 13.5px/1.5 var(--font-sans, system-ui, -apple-system, sans-serif);white-space:nowrap;cursor:pointer;transition:opacity 150ms,background-color 150ms,transform 150ms;background:var(--ink, #202a30);color:var(--bg, #faf9f6);}.ds-btn-primary:hover{opacity:.85;}.ds-btn-primary:focus-visible{outline:2px solid var(--accent, #176b75);outline-offset:2px;}.ds-btn-primary:active{transform:scale(.98);}.ds-btn-primary:disabled{pointer-events:none;opacity:.45;}"
+    },
+    {
+      "name": "次级按钮",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "返回、预览与辅助操作。",
+      "html": "<button class=\"ds-btn-secondary\">次级按钮</button>",
+      "css": ".ds-btn-secondary{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:36px;padding:0 14px;border:0;border-radius:var(--radius-control, 8px);font:500 13.5px/1.5 var(--font-sans, system-ui, -apple-system, sans-serif);white-space:nowrap;cursor:pointer;transition:opacity 150ms,background-color 150ms,transform 150ms;background:var(--surface, #ffffff);color:var(--ink, #202a30);box-shadow:0 0 0 1px var(--line-strong, #d1d9d5);}.ds-btn-secondary:hover{background:var(--bg-sunk, #f3f3ef);}.ds-btn-secondary:focus-visible{outline:2px solid var(--accent, #176b75);outline-offset:2px;}.ds-btn-secondary:active{transform:scale(.98);}.ds-btn-secondary:disabled{pointer-events:none;opacity:.45;}"
+    },
+    {
+      "name": "危险按钮",
+      "kind": "button",
+      "refersTo": "button-danger",
+      "description": "删除和暂停，配合影响说明与原因确认。",
+      "html": "<button class=\"ds-btn-danger\">危险按钮</button>",
+      "css": ".ds-btn-danger{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:36px;padding:0 14px;border:0;border-radius:var(--radius-control, 8px);font:500 13.5px/1.5 var(--font-sans, system-ui, -apple-system, sans-serif);white-space:nowrap;cursor:pointer;transition:opacity 150ms,background-color 150ms,transform 150ms;background:var(--hot, #b3402a);color:#ffffff;}.ds-btn-danger:hover{opacity:.9;}.ds-btn-danger:focus-visible{outline:2px solid var(--accent, #176b75);outline-offset:2px;}.ds-btn-danger:active{transform:scale(.98);}.ds-btn-danger:disabled{pointer-events:none;opacity:.45;}"
+    },
+    {
+      "name": "Ghost 按钮",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "弹窗取消等轻量操作。",
+      "html": "<button class=\"ds-btn-ghost\">Ghost 按钮</button>",
+      "css": ".ds-btn-ghost{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:36px;padding:0 14px;border:0;border-radius:var(--radius-control, 8px);font:500 13.5px/1.5 var(--font-sans, system-ui, -apple-system, sans-serif);white-space:nowrap;cursor:pointer;transition:opacity 150ms,background-color 150ms,transform 150ms;background:transparent;color:var(--ink-2, #303c42);}.ds-btn-ghost:hover{background:var(--bg-sunk, #f3f3ef);}.ds-btn-ghost:focus-visible{outline:2px solid var(--accent, #176b75);outline-offset:2px;}.ds-btn-ghost:active{transform:scale(.98);}.ds-btn-ghost:disabled{pointer-events:none;opacity:.45;}"
+    },
+    {
+      "name": "输入框",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "名称、地址和搜索的共享输入外观。",
+      "html": "<label class=\"ds-field\"><span class=\"ds-label\">名称</span><input class=\"ds-input\" placeholder=\"信源名称\" /></label>",
+      "css": ".ds-field{display:block;font-family:var(--font-sans, system-ui, -apple-system, sans-serif);}.ds-label{display:block;margin-bottom:4px;color:var(--ink-2, #303c42);font-size:12.5px;font-weight:500;line-height:1.5;}.ds-input{width:100%;padding:8px 12px;border:0;border-radius:var(--radius-control, 8px);background:var(--surface, #ffffff);color:var(--ink, #202a30);font:400 13.5px/1.5 var(--font-sans, system-ui, -apple-system, sans-serif);box-shadow:0 0 0 1px var(--line-strong, #d1d9d5);outline:none;transition:box-shadow 150ms;}.ds-input::placeholder{color:var(--ink-4, #657176);}.ds-input:focus,.ds-input:focus-visible{box-shadow:0 0 0 2px var(--accent, #176b75);}"
+    },
+    {
+      "name": "行业切换",
+      "kind": "nav",
+      "refersTo": "industry-nav",
+      "description": "选择当前行业，选中项与当前行业说明对应。",
+      "html": "<nav class=\"ds-industry\" aria-label=\"信源行业\"><a class=\"ds-tab\" href=\"/manage/sources?industry=medical\" aria-current=\"page\">医疗</a><a class=\"ds-tab\" href=\"/manage/sources?industry=ai\">AI</a></nav>",
+      "css": ".ds-industry{display:inline-flex;align-items:center;gap:4px;padding:4px;border-radius:var(--radius-control, 8px);background:var(--bg-sunk, #f3f3ef);}.ds-tab{padding:8px 20px;border-radius:var(--radius-control, 8px);color:var(--ink-3, #59656b);font:500 13.5px/1.5 var(--font-sans, system-ui, -apple-system, sans-serif);text-decoration:none;transition:color 150ms,background-color 150ms;}.ds-tab:hover{color:var(--ink, #202a30);}.ds-tab[aria-current=\"page\"]{background:var(--ink, #202a30);color:var(--bg, #faf9f6);}.ds-tab:focus-visible{outline:2px solid var(--accent, #176b75);outline-offset:2px;}"
+    },
+    {
+      "name": "筛选胶囊",
+      "kind": "chip",
+      "refersTo": "filter-chip",
+      "description": "列表筛选，墨色填充标明当前选项。",
+      "html": "<div class=\"ds-filters\"><a class=\"ds-filter ds-selected\" href=\"?industry=medical\">全部</a><a class=\"ds-filter\" href=\"?industry=medical&amp;health=failing\">失败</a></div>",
+      "css": ".ds-filters{display:flex;flex-wrap:wrap;gap:6px;}.ds-filter{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:9999px;background:var(--surface, #ffffff);color:var(--ink-2, #303c42);box-shadow:0 0 0 1px var(--line, #dfe4e1);font:400 12.5px/1.5 var(--font-sans, system-ui, -apple-system, sans-serif);text-decoration:none;transition:color 150ms,background-color 150ms;}.ds-filter:hover{background:var(--bg-sunk, #f3f3ef);}.ds-filter.ds-selected{background:var(--ink, #202a30);color:var(--bg, #faf9f6);box-shadow:none;}.ds-filter:focus-visible{outline:2px solid var(--accent, #176b75);outline-offset:2px;}"
+    },
+    {
+      "name": "状态徽章",
+      "kind": "chip",
+      "refersTo": "badge",
+      "description": "类型、参与方式与状态的非交互标签。",
+      "html": "<div class=\"ds-badges\"><span class=\"ds-badge\">RSS</span><span class=\"ds-badge ds-accent\">精选</span></div>",
+      "css": ".ds-badges{display:flex;gap:4px;}.ds-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;white-space:nowrap;border-radius:9999px;background:var(--bg-sunk, #f3f3ef);color:var(--ink-3, #59656b);box-shadow:0 0 0 1px var(--line, #dfe4e1);font:500 11.5px/1.5 var(--font-sans, system-ui, -apple-system, sans-serif);}.ds-badge.ds-accent{background:var(--accent-soft, rgba(23,107,117,.08));color:var(--accent, #176b75);box-shadow:0 0 0 1px color-mix(in oklab,var(--accent, #176b75) 20%,transparent);}"
+    },
+    {
+      "name": "后台面板",
+      "kind": "card",
+      "refersTo": "panel",
+      "description": "表单与辅助信息的平面白色容器。",
+      "html": "<section class=\"ds-panel\"><div class=\"ds-panel-head\"><h2 class=\"ds-panel-title\">信源定义</h2></div><div class=\"ds-panel-body\">填写名称和采集配置。</div></section>",
+      "css": ".ds-panel{min-width:0;border-radius:var(--radius-panel, 14px);background:var(--surface, #ffffff);box-shadow:0 0 0 1px var(--line, #dfe4e1);font-family:var(--font-sans, system-ui, -apple-system, sans-serif);color:var(--ink, #202a30);}.ds-panel-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line, #dfe4e1);}.ds-panel-title{margin:0;min-width:0;overflow-wrap:break-word;font-size:14px;font-weight:600;line-height:1.5;}.ds-panel-body{padding:16px;font-size:14px;line-height:1.5;}"
+    }
+  ],
+  "narrative": {
+    "northStar": "现有后台的纸色工作台",
+    "overview": "本说明只约束 `apps/web/manage` 的管理扩展。页面继承现有后台的纸色、墨色、青色、表格与表单，优先支持扫描、编辑和确认操作；不建立新的品牌或替代整个站点的视觉规范。\n\n样式真源是 `../app/app.css` 和 `../app/features/admin/ui.tsx`。`manage.css` 直接导入共享样式并声明共享后台组件的扫描路径，行业切换与离开确认复用这些语义 token。业务与权限边界见本目录 `PRODUCT.md`。",
+    "keyCharacteristics": [
+      "纸色页面与白色细边框面板。",
+      "墨色主操作和选中态，青色链接与焦点。",
+      "系统字体、紧凑信息层级、等宽配置数据。",
+      "两行业共享组件与视觉语法，当前行业始终明确。"
+    ],
+    "rules": [
+      {
+        "name": "The Action Contrast Rule",
+        "body": "主按钮、行业选中态和筛选选中态使用墨色底与纸色字；青色用于链接、焦点和轻量状态，不为两行业另配主题颜色。",
+        "section": "colors"
+      },
+      {
+        "name": "The One UI Voice Rule",
+        "body": "管理扩展沿用共享系统字体与字重层级；等宽字体只承载标识和结构化数据。",
+        "section": "typography"
+      },
+      {
+        "name": "The Flat Workspace Rule",
+        "body": "常规面板保持平面分区；遮罩和浮层深度只用于需要停下并确认的交互。",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do 从共享样式和后台组件继承 token 与状态，不在管理扩展复制主题。",
+      "Do 保持墨色选中态、青色链接与焦点，以及文字表达的状态含义。",
+      "Do 让窄屏字段堆叠、操作换行、表格在自身容器中滚动。"
+    ],
+    "donts": [
+      "Don't 为医疗和 AI 添加不同视觉世界或额外行业配色。",
+      "Don't 把确认弹窗的遮罩、模糊或阴影推广到常规面板。",
+      "Don't 把本目录的管理页面布局当作全站产品或视觉规范。"
+    ]
+  }
+}

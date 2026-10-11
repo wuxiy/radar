@@ -144,7 +144,7 @@ async function handle(req: import("node:http").IncomingMessage, res: import("nod
   const raw = req.url ?? "/";
   const qi = raw.indexOf("?");
   const publicPath = qi >= 0 ? raw.slice(0, qi) : raw;
-  if (PROFILE.basePath && publicPath !== PROFILE.basePath && !publicPath.startsWith(`${PROFILE.basePath}/`)) {
+  if (PROFILE.basePath && publicPath !== PROFILE.basePath && publicPath !== `${PROFILE.basePath}.data` && !publicPath.startsWith(`${PROFILE.basePath}/`)) {
     res.writeHead(404, { "Cache-Control": "no-store" }); return res.end("Not found");
   }
   const pathname = localPath(publicPath);

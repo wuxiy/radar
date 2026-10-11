@@ -162,6 +162,10 @@ async function lockMaterial(db: Db, identityKey: string) {
 }
 
 async function upsertIn(db: Db, m: MaterialInput): Promise<MaterialResult> {
+  // API deletion and worker intake run concurrently. Hold this lock until material storage commits,
+  // so a response already in flight cannot add or revise articles after deletion has committed.
+  const [source] = await db`SELECT id FROM sources WHERE id = ${m.sourceId} AND deleted_at IS NULL FOR SHARE`;
+  if (!source) throw new Error(`source missing or deleted: ${m.sourceId}`);
   m = { ...m,
     publishedAt: m.publishedAt && Number.isFinite(m.publishedAt.getTime()) ? m.publishedAt : null,
     sourceUpdatedAt: m.sourceUpdatedAt && Number.isFinite(m.sourceUpdatedAt.getTime()) ? m.sourceUpdatedAt : null,

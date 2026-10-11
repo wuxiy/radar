@@ -1,3 +1,4 @@
+import { sourceManagementReturn } from "@aihot/contracts/source-management";
 // Admin identity: the admin password (ADMIN_PASSWORD), or optionally Feishu OAuth with an allowlist of
 // union_ids / emails, or native OIDC with an explicit administrator mapping; opaque sessions stored hashed.
 // Development may impersonate an admin with DEV_AUTH_ROLE=admin; production refuses to start with it.
@@ -132,6 +133,10 @@ export function safeReturn(target: string): string {
     }
   }
   path = localPath(path);
+  if (PROFILE.basePath) {
+    const management = sourceManagementReturn(path, PROFILE.id);
+    if (management) return management;
+  }
   return /^\/admin(\/|\?|$)/.test(path) && !path.startsWith("//") ? path : "/admin";
 }
 

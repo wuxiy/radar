@@ -2,6 +2,7 @@ import { PROFILE } from "@aihot/industry/profile";
 
 /** Root-relative browser URLs stay in the current industry; external URLs and anchors stay intact. */
 export function industryPath(value: string): string {
+  if (/^\/manage(?:\/|\?|$)/.test(value)) return value;
   if (!PROFILE.basePath || !value.startsWith("/") || value.startsWith("//")) return value;
   if (value === PROFILE.basePath || value.startsWith(`${PROFILE.basePath}/`) || value.startsWith(`${PROFILE.basePath}?`)) return value;
   return `${PROFILE.basePath}${value}`;

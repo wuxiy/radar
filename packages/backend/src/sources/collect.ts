@@ -27,7 +27,7 @@ export interface CollectResult {
 async function loadSource(id: string): Promise<SourceRow | null> {
   const [s] = await sql<SourceRow[]>`
     SELECT id, name, kind, config, tier, participation_mode, first_party, interval_minutes, enabled, cursor, fail_count
-    FROM sources WHERE id = ${id}`;
+    FROM sources WHERE id = ${id} AND deleted_at IS NULL`;
   return s ?? null;
 }
 
@@ -84,7 +84,7 @@ async function recordFetch(db: Db, sourceId: string, runId: number, run: { found
       UPDATE sources SET last_fetch_at = now(), last_ok_at = now(), fail_count = 0, last_error = NULL,
         health = 'ok', cursor = ${db.json(run.cursor as never)}, updated_at = now(),
         next_fetch_at = now() + make_interval(mins => interval_minutes)
-      WHERE id = ${sourceId}`;
+      WHERE id = ${sourceId} AND deleted_at IS NULL`;
     await db`UPDATE fetch_runs SET status = 'ok', finished_at = now(), found_count = ${run.found}, new_count = ${run.created}, detail = ${detail} WHERE id = ${runId}`;
     return;
   }
@@ -95,7 +95,7 @@ async function recordFetch(db: Db, sourceId: string, runId: number, run: { found
       health = CASE WHEN ${run.budget} THEN health WHEN fail_count + 1 >= 5 THEN 'failing' ELSE 'degraded' END,
       next_fetch_at = now() + make_interval(mins => CASE WHEN ${run.budget} THEN 15 ELSE LEAST(interval_minutes * (fail_count + 2), 360) END),
       updated_at = now()
-    WHERE id = ${sourceId}`;
+    WHERE id = ${sourceId} AND deleted_at IS NULL`;
   await db`UPDATE fetch_runs SET status = 'failed', finished_at = now(), found_count = ${run.found}, new_count = ${run.created},
               error = ${run.error}, detail = ${detail} WHERE id = ${runId}`;
 }
@@ -284,7 +284,7 @@ export async function collectXShard(key: string, sourceIds: string[]): Promise<{
   const members = (
     await sql<SourceRow[]>`
       SELECT id, name, kind, config, tier, participation_mode, first_party, interval_minutes, enabled, cursor, fail_count
-      FROM sources WHERE id IN ${sql(sourceIds)} ORDER BY id`
+      FROM sources WHERE id IN ${sql(sourceIds)} AND deleted_at IS NULL ORDER BY id`
   ).filter((m) => m.enabled && shardHandle(m));
   if (members.length === 0) return { key, status: "skipped", accounts: 0, found: 0, created: 0 };
   const runs = new Map((await sql<{ id: number; source_id: string }[]>`
@@ -344,13 +344,13 @@ const sharded = () => sql`kind = 'x_search' AND config->>'query' ~* ${SHARDABLE_
 async function scheduleXShards(): Promise<number> {
   const rows = await sql<Array<Pick<SourceRow, "id" | "kind" | "config" | "cursor" | "participation_mode"> & { due: boolean }>>`
     SELECT id, kind, config, cursor, participation_mode, (next_fetch_at IS NULL OR next_fetch_at <= now()) AS due
-    FROM sources WHERE enabled AND ${sharded()}`;
+    FROM sources WHERE enabled AND deleted_at IS NULL AND ${sharded()}`;
   const due = new Set(rows.filter((r) => r.due).map((r) => r.id));
   let enqueued = 0;
   for (const shard of planXShards(rows)) {
     if (!shard.sourceIds.some((id) => due.has(id))) continue;
     if (await enqueue(QUEUES.fetchXShard, { key: shard.key, sourceIds: shard.sourceIds }, { singletonKey: shard.key })) enqueued += 1;
-    await sql`UPDATE sources SET next_fetch_at = now() + interval '10 minutes' WHERE id IN ${sql(shard.sourceIds)}`;
+    await sql`UPDATE sources SET next_fetch_at = now() + interval '10 minutes' WHERE id IN ${sql(shard.sourceIds)} AND deleted_at IS NULL`;
   }
   return enqueued;
 }
@@ -359,12 +359,12 @@ async function scheduleXShards(): Promise<number> {
 export async function scheduleDueSources(): Promise<{ enqueued: number; shards: number }> {
   const rows = await sql<{ id: string }[]>`
     SELECT id FROM sources
-    WHERE enabled AND kind IN ('rss', 'web_list', 'json_list', 'x_search') AND (next_fetch_at IS NULL OR next_fetch_at <= now()) AND NOT (${sharded()})
+    WHERE enabled AND deleted_at IS NULL AND kind IN ('rss', 'web_list', 'json_list', 'x_search') AND (next_fetch_at IS NULL OR next_fetch_at <= now()) AND NOT (${sharded()})
     ORDER BY next_fetch_at NULLS FIRST LIMIT 40`;
   let enqueued = 0;
   for (const r of rows) {
     if (await enqueue(QUEUES.fetchSource, { sourceId: r.id }, { singletonKey: r.id })) enqueued += 1;
-    await sql`UPDATE sources SET next_fetch_at = now() + interval '10 minutes' WHERE id = ${r.id}`;
+    await sql`UPDATE sources SET next_fetch_at = now() + interval '10 minutes' WHERE id = ${r.id} AND deleted_at IS NULL`;
   }
   return { enqueued, shards: await scheduleXShards() };
 }

@@ -1,4 +1,6 @@
 import { localPath } from "@aihot/industry/paths";
+import { PROFILE } from "@aihot/industry/profile";
+import { sourceManagementReturn } from "@aihot/contracts/source-management";
 import { industryPath } from "@aihot/industry/paths";
 // Configured sign-in methods. OIDC starts on its canonical origin even when this page is opened through a tunnel.
 import { useLoaderData } from "react-router";
@@ -18,7 +20,8 @@ export async function loader({ request }: Route.LoaderArgs) {
   const url = new URL(request.url);
   const returnTo = localPath(url.searchParams.get("return") ?? "/admin");
   const options = await apiGet<{ password: boolean; feishu: boolean; oidc: boolean; oidcUrl: string | null }>("/api/auth/options", { signal: request.signal }).catch(() => ({ password: true, feishu: false, oidc: false, oidcUrl: null }));
-  return { returnTo: returnTo.startsWith("/admin") ? returnTo : "/admin", error: url.searchParams.get("error"), ...options };
+  const management = PROFILE.basePath ? sourceManagementReturn(returnTo, PROFILE.id) : null;
+  return { returnTo: management ?? (/^\/admin(?:\/|\?|$)/.test(returnTo) ? returnTo : "/admin"), error: url.searchParams.get("error"), ...options };
 }
 
 export const meta: Route.MetaFunction = () => [{ title: `登录 · ${SITE.name} 后台` }, { name: "robots", content: "noindex, nofollow" }];

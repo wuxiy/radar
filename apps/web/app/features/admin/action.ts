@@ -5,6 +5,7 @@ import { useCallback, useRef, useState } from "react";
 import { useRevalidator, useRouteLoaderData } from "react-router";
 import type { AdminMe } from "@aihot/contracts/admin";
 import { toast } from "./toast";
+import { useSourceManagement } from "./source-context";
 
 /** A command the api refused; the message is its explanation. */
 class AdminError extends Error {}
@@ -18,7 +19,11 @@ function newKey() {
 }
 
 export function useAdminAction() {
-  const me = useAdminMe();
+  const legacyMe = useAdminMe();
+  const management = useSourceManagement();
+  const me = management?.me ?? legacyMe;
+  const industry = management?.industry;
+  const setManagementPending = management?.setPending;
   const revalidator = useRevalidator();
   const [pending, setPending] = useState<string | null>(null);
   const keys = useRef(new Map<string, string>());
@@ -35,15 +40,17 @@ export function useAdminAction() {
       const key = keys.current.get(label) ?? newKey();
       keys.current.set(label, key);
       setPending(label);
+      setManagementPending?.(true);
       try {
-        const res = await fetch(industryPath(path), {
+        const res = await fetch(industry ? `/${industry}${path}` : industryPath(path), {
           method,
           credentials: "same-origin",
           headers: { "content-type": "application/json", "x-csrf-token": me.csrf, "idempotency-key": key },
           body: body === undefined ? undefined : JSON.stringify(body),
         });
         if (res.status === 401) {
-          window.location.href = industryPath(`/api/auth/login?return=${encodeURIComponent(window.location.pathname + window.location.search)}`);
+          const login = `/api/auth/login?return=${encodeURIComponent(window.location.pathname + window.location.search)}`;
+          window.location.href = industry ? `/${industry}${login}` : industryPath(login);
           return null;
         }
         const text = await res.text();
@@ -59,9 +66,10 @@ export function useAdminAction() {
         return null;
       } finally {
         setPending(null);
+        setManagementPending?.(false);
       }
     },
-    [me.csrf, revalidator],
+    [me.csrf, revalidator, industry, setManagementPending],
   );
 
   return { run, pending, busy: pending !== null || revalidator.state === "loading" };

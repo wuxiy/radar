@@ -6,3 +6,6 @@ for (const industry of ["ai", "medical"]) {
   });
   if (result.status !== 0) process.exit(result.status || 1);
 }
+
+const management = spawnSync(process.platform === "win32" ? "npm.cmd" : "npm", ["exec", "-w", "@aihot/web", "--", "vite", "build", "--config", "manage.vite.config.ts"], { stdio: "inherit" });
+if (management.status !== 0) process.exit(management.status || 1);

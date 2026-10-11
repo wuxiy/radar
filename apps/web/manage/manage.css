@@ -1,0 +1,3 @@
+@import "../app/app.css";
+/* Vite's standalone root does not scan the admin views shared with the industry builds. */
+@source "../app/features/admin";

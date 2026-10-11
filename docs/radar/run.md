@@ -34,11 +34,23 @@ docker compose -f docker-compose.radar.yml up -d --build
 
 镜像默认 `node:24-trixie-slim`，可用 `--build-arg NODE_IMAGE=<可访问的同版 Debian 镜像>` 替换镜像入口；npm 源可用 `--build-arg NPM_REGISTRY=<镜像地址>` 设置。2026-10-03 本机镜像获取曾失败，随后目标 NAS 镜像构建与启动成功；使用者改为暂不采用 Docker，当前运行方式是 Node 24 源码构建与 systemd 常驻，见 [NAS 部署记录](nas-deployment.md)。
 
-已有 NAS 反向代理时，把公共地址代理到 web，保留 `/ai`、`/medical` 路径，设置 `SITE_URL` 为实际根地址；仅在可信代理前设置 `TRUST_PROXY=true`。目标 NAS 为 x86_64，前端监听 13300；域名的外层端口映射尚未完成，当前通过 SSH 隧道访问。
+已有 NAS 反向代理时，把公共地址代理到 web，保留 `/ai`、`/medical` 路径，设置 `SITE_URL` 为实际根地址；仅在可信代理前设置 `TRUST_PROXY=true`。目标 NAS 为 x86_64，前端监听 13300；当前正式入口为 `https://radar.cywu.heiyu.space`，SSH 隧道可用于本机排查。
+
+## 页面管理信源
+
+从 work-os 的「Radar 信源管理」进入 `/manage/sources?industry=medical`，在同一页面切换医疗和 AI；默认医疗，刷新和收藏链接保留行业。登录后返回原来的管理路径。两个频道仍使用独立的管理员会话、CSRF、数据库、采集开关和预算；切换行业前若有未保存内容，会先要求确认。
+
+登录管理员后可新建信源，点击列表的“编辑”调整名称、采集配置、频率等设置。保存时填写原因，修改会记录在审计中；相同地址会提示已有信源。原来的 `/ai/admin/sources` 和 `/medical/admin/sources` 继续可用，其他后台功能保留各自行业入口。
+
+`npm run radar:build` 同时构建两个行业和管理页，网关直接提供管理页静态产物，无需额外后端或服务。运行默认 `npm run build -w @aihot/web` 会清理整个 `apps/web/build/`，完整检查时先运行默认构建和网页测试，再重新运行 `npm run radar:build`。本轮不需要新增数据库迁移。逐项结果见 [统一信源管理验收](unified-source-management-acceptance.md)。
+
+详情页底部可删除信源，确认时必须填写原因。删除会从管理列表移除并停止后续采集、手动采集和外部推送，已采集的内容、原文链接及审计记录保留。删除后的 ID 不能复用，需要重新添加时使用新 ID；暂时停用使用“暂停”。操作只影响当前行业，重启或重复执行 seed 不会恢复被删除的信源。已发出的网络请求可能仍会完成，但删除提交后的响应不能新增或修订材料。
+
+升级先运行双行业 `npm run radar:setup`，让两库执行新增迁移 `0061_source_deletion.sql`，再启动新版本 API 和 worker。迁移仅增加可空删除时间列，不删除现有文章或来源设置。
 
 ## 开关与补充来源
 
-新部署默认关闭采集、模型、飞书和 IndexNow，医疗示例来源也默认暂停。模型、采集服务、来源适配和预算确认后可按行业启用，例如 `RADAR_MEDICAL_COLLECT_ENABLED=true`；未授权全文继续关闭。当前 NAS 已按用户授权开启医疗采集和模型，AI 继续关闭。用户后续补充的微信公众号、播客和 X 账号在医疗后台独立登记。
+新部署默认关闭采集、模型、飞书和 IndexNow，医疗示例来源也默认暂停。模型、采集服务、来源适配和预算确认后可按行业启用，例如 `RADAR_MEDICAL_COLLECT_ENABLED=true`；未授权全文继续关闭。当前 NAS 已按用户授权开启医疗和 AI 采集、模型；两频道的模型预算独立。用户后续补充的微信公众号、播客和 X 账号在医疗后台独立登记。
 
 医疗外部补录使用 `POST /medical/api/ingest/items`，需要独立 `RADAR_MEDICAL_INGEST_TOKEN`，请求格式见 [信源文档](../sources.md)。数据库中的预算、来源设置和运行记录仍按行业分别管理。
 
@@ -47,6 +59,8 @@ docker compose -f docker-compose.radar.yml up -d --build
 AI 信源配置 `industry/sources.json` 保留原有 18 个 RSS，并新增 `@yetone`（`x-yetone`）和 `@mattpocockuk`（`x-mattpocockuk`），共 20 个。两个账号按 T2 个人信源参与精选，搜索最新帖子并排除回复，站内和订阅全文均关闭；医疗配置不包含这两个账号。
 
 已有部署更新源码后执行 `npm run radar:setup`，只补上缺失的来源，不覆盖后台修改，也不会重复创建。X 使用现有 SocialData 采集器，需要 AI 后端的 `RADAR_AI_SOCIALDATA_API_KEY`，或者该频道私有 `collectors.env` 中的 `SOCIALDATA_API_KEY`；凭据不放在信源 JSON 中。自动采集还需要 AI 频道 `COLLECT_ENABLED=true` 和数据库 `socialdata` 请求预算，模型处理另需该频道模型配置和 `llm` 预算。新增配置不自动打开这些阀门或付费额度，不能据此认定已抓到真实帖子。配置方法及合并搜索节奏见 [X 信源](../sources.md#x_search)。
+
+2026-10-07 NAS 已实际启用：AI 的 SocialData 凭据位于 `.data/credentials/collectors.env`，模型位于 `.data/radar/ai/private/model.json`，文件 600、父目录 700。AI 采用 `deepseek/deepseek-flash`；`socialdata` 与 `llm` 各限 10/分钟、100/小时、100/滚动 24 小时，不占用医疗额度。两账号首次各入库 8 条，并各完成一条真实摘要发布；可在 `/ai/all?channel=x` 查看。首次 RSS 导入与 X 共用 AI 模型额度，未完成内容继续排队，详见 [启用验收](ai-x-activation-acceptance.md)。
 
 ### 模型与请求预算
 

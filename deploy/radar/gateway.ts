@@ -1,15 +1,24 @@
 import { createServer, request as httpRequest, type IncomingMessage, type ServerResponse } from "node:http";
 import { INDUSTRY_IDS, type IndustryId } from "./config.ts";
+import { fileURLToPath } from "node:url";
+import { serveManagement } from "./management.ts";
 
 const LEGACY = new Set(["all", "hot", "items", "story", "topics", "daily", "weekly", "monthly", "about", "terms", "privacy", "changelog", "feedback", "more", "starred", "agent", "admin", "api", "feed.xml", "feed", "llms.txt", "robots.txt", "sitemap.xml", "manifest.webmanifest", "openapi-v1.json", "og", "icon.png", "icon-192.png", "apple-icon.png", "favicon.ico", "logo.svg", "codex-reset", "leaderboard", "contact", "model-providers", "leaderboard-sources", ".well-known"]);
 
-export function createGateway(targets: Record<IndustryId, number>, trustProxy = false, siteUrl = "http://localhost:3000") {
+export function createGateway(targets: Record<IndustryId, number>, trustProxy = false, siteUrl = "http://localhost:3000", managementDir = fileURLToPath(new URL("../../apps/web/build/manage", import.meta.url))) {
   return createServer((req: IncomingMessage, res: ServerResponse) => {
     const raw = req.url || "/";
     const path = raw.split("?")[0];
     const segment = path.split("/")[1];
+    if (segment === "manage") {
+      void serveManagement(req, res, managementDir).catch(() => {
+        if (res.headersSent) return res.destroy();
+        res.writeHead(500, { "Cache-Control": "no-store" }); res.end("Management unavailable");
+      });
+      return;
+    }
     if (path === "/robots.txt" && (req.method === "GET" || req.method === "HEAD")) {
-      const lines = ["User-agent: *", ...INDUSTRY_IDS.flatMap(id => [
+      const lines = ["User-agent: *", "Disallow: /manage", ...INDUSTRY_IDS.flatMap(id => [
         `Allow: /${id}/api/v1/`, `Allow: /${id}/api/mcp`, `Disallow: /${id}/api/`,
         `Disallow: /${id}/admin`, `Disallow: /${id}/starred`, `Disallow: /${id}/feedback`,
         `Sitemap: ${siteUrl}/${id}/sitemap.xml`,
@@ -17,7 +26,8 @@ export function createGateway(targets: Record<IndustryId, number>, trustProxy = 
       res.writeHead(200, { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "public, max-age=3600" });
       return res.end(req.method === "HEAD" ? undefined : lines.join("\n"));
     }
-    const industry = INDUSTRY_IDS.find(id => segment === id);
+    // React Router's index navigation request has no slash after its basename: /medical.data.
+    const industry = INDUSTRY_IDS.find(id => segment === id || path === `/${id}.data`);
     if (!industry) {
       const legacy = LEGACY.has(segment);
       if (path === "/" || legacy) {

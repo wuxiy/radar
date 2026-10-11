@@ -179,11 +179,10 @@ export function ButtonLink({ to, children, tone = "secondary", size = "md" }: { 
 const INPUT = "w-full rounded-control bg-surface px-3 py-2 text-[13.5px] text-ink ring-1 ring-line-strong outline-none transition-shadow placeholder:text-ink-4 focus:ring-2 focus:ring-accent";
 
 export function Field({ label, hint, children }: { label: ReactNode; hint?: ReactNode; children: ReactNode }) {
-  const id = useId();
   return (
-    <label htmlFor={id} className="block">
+    <label className="block">
       <span className="mb-1 block text-[12.5px] font-medium text-ink-2">{label}</span>
-      <span className="[&>*]:w-full" id={id}>{children}</span>
+      <span className="[&>*]:w-full">{children}</span>
       {hint && <span className="mt-1 block text-[12px] text-ink-4">{hint}</span>}
     </label>
   );
@@ -290,26 +289,40 @@ export function ReasonDialog({
 }) {
   const [reason, setReason] = useState("");
   const ref = useRef<HTMLTextAreaElement>(null);
+  const dialogRef = useRef<HTMLFormElement>(null);
+  const titleId = useId();
+  const descriptionId = useId();
   useEffect(() => {
     if (!open) return;
+    const previous = document.activeElement as HTMLElement | null;
     setReason("");
     const t = setTimeout(() => ref.current?.focus(), 60);
-    return () => clearTimeout(t);
+    return () => { clearTimeout(t); previous?.focus(); };
   }, [open]);
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !busy) onClose();
+      if (e.key !== "Tab") return;
+      const controls = dialogRef.current?.querySelectorAll<HTMLElement>('textarea, input, select, button:not(:disabled), a[href], [tabindex="0"]');
+      const first = controls?.[0], last = controls?.[controls.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last?.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first?.focus(); }
+    };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+  }, [open, onClose, busy]);
   return (
     <AnimatePresence>
       {open && (
         <motion.div className="fixed inset-0 z-[75] flex items-end justify-center p-3 sm:items-center" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-          <div className="absolute inset-0 bg-ink/30 backdrop-blur-[2px]" onClick={onClose} />
+          <div className="absolute inset-0 bg-ink/30 backdrop-blur-[2px]" onClick={() => { if (!busy) onClose(); }} />
           <motion.form
+            ref={dialogRef}
             role="dialog"
             aria-modal="true"
+            aria-labelledby={titleId}
+            aria-describedby={description ? descriptionId : undefined}
             initial={{ y: 16, scale: 0.98, opacity: 0 }}
             animate={{ y: 0, scale: 1, opacity: 1 }}
             exit={{ y: 10, scale: 0.98, opacity: 0 }}
@@ -317,13 +330,13 @@ export function ReasonDialog({
             className="relative max-h-[calc(100dvh-1.5rem)] w-full max-w-lg overflow-y-auto rounded-sheet bg-raised p-5 shadow-2xl ring-1 ring-line-strong"
             onSubmit={async (e) => {
               e.preventDefault();
-              if (requireReason && !reason.trim()) return;
+              if (busy || (requireReason && !reason.trim())) return;
               const closed = await onSubmit(reason.trim());
               if (closed !== false) onClose();
             }}
           >
-            <h2 className="text-[16px] font-semibold text-ink">{title}</h2>
-            {description && <div className="mt-1.5 text-[13px] leading-relaxed text-ink-3">{description}</div>}
+            <h2 id={titleId} className="text-[16px] font-semibold text-ink">{title}</h2>
+            {description && <div id={descriptionId} className="mt-1.5 text-[13px] leading-relaxed text-ink-3">{description}</div>}
             {children && <div className="mt-4 space-y-3">{children}</div>}
             <div className="mt-4">
               <Field label={requireReason ? "原因（写进审计记录）" : "备注（可选）"}>
@@ -331,7 +344,7 @@ export function ReasonDialog({
               </Field>
             </div>
             <div className="mt-5 flex justify-end gap-2">
-              <Button tone="ghost" onClick={onClose}>取消</Button>
+              <Button tone="ghost" disabled={busy} onClick={onClose}>取消</Button>
               <Button type="submit" tone={danger ? "danger" : "primary"} busy={busy} disabled={requireReason && !reason.trim()}>
                 {confirmLabel}
               </Button>

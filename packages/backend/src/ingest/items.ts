@@ -34,7 +34,7 @@ export async function ingestItems(body: { sourceId?: unknown; sourceName?: unkno
     INSERT INTO sources (id, name, kind, config, tier, participation_mode, interval_minutes, enabled, health, tags)
     VALUES (${sourceId.slice(0, 120)}, ${typeof body.sourceName === "string" && body.sourceName.trim() ? body.sourceName.trim().slice(0, 200) : sourceId.slice(0, 120)},
             'external', '{}'::jsonb, 'T2', 'isolated', 1440, true, 'ok', ${["ingest:auto-created"]})
-    ON CONFLICT (id) DO UPDATE SET last_ok_at = now() WHERE sources.enabled
+    ON CONFLICT (id) DO UPDATE SET last_ok_at = now() WHERE sources.enabled AND sources.deleted_at IS NULL
     RETURNING id, participation_mode, enabled`;
   if (!source) throw new IngestError(409, "source paused");
 
@@ -65,7 +65,7 @@ export async function ingestItems(body: { sourceId?: unknown; sourceName?: unkno
     if (res.created) created += 1;
     if (res.created || res.revised || res.processingNeeded) await queueProcessing(res.articleId);
   }
-  await sql`UPDATE sources SET last_fetch_at = now(), last_ok_at = now() WHERE id = ${source!.id}`;
+  await sql`UPDATE sources SET last_fetch_at = now(), last_ok_at = now() WHERE id = ${source!.id} AND deleted_at IS NULL`;
   await sql`INSERT INTO ingest_events (client, kind, status, summary) VALUES ('ingest-items', 'items', 'ok', ${sql.json({ sourceId: source!.id, received: items.length, created })})`;
   return { ok: true, created };
 }
