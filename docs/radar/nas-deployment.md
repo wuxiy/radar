@@ -1,10 +1,10 @@
 # NAS 源码部署记录
 
-2026-10-12 当前状态：已保存 NAS 个人改造为 `7c08bd5`，合并 AIHOT `931a4eb` 的 32 个提交，代码发布基点 `0116b1a`。原生源码重新安装与双行业构建完成，两个数据库各 63 条迁移，仅新增两个索引；`radar-api`、`radar-worker`、`radar-web` 均 active，公网入口 [Radar](https://radar.cywu.heiyu.space/medical)，前端监听 13300。下方早期记录保留为历史快照。
+2026-10-12 当前状态：已保存 NAS 个人改造为 `7c08bd5`，合并 AIHOT 至 `e36480d` 的 34 个提交（最新合并 `7cc8210`）。原生源码重新安装与双行业构建完成，两个数据库各 63 条迁移，仅新增两个索引；`radar-api`、`radar-worker`、`radar-web` 均 active，公网入口 [Radar](https://radar.cywu.heiyu.space/medical)，前端监听 13300。下方早期记录保留为历史快照。
 
 七个新医疗自动来源经真实预览和使用者明确批准后启用，连同 HIT 共八个自动来源；三个旧 external 占位暂停、历史保留。医疗 `llm` 限额仍为 10/分钟、100/小时、100/滚动 24 小时；AI 原配置、authentik、私有模型／采集凭据与连接配置的哈希及权限保持。每个新来源各三条真实标题／日期／正文共 21/21 通过；首轮采集无失败。两个频道真实 HTTPS smoke 各 30/30，桌面与手机精选导航、统一管理登录和 authentik 入口无浏览器执行错误。本轮未重新完成真人 IdP 登录，不将入口检查描述为完整 SSO 验收。
 
-本机后端 779/779、网页 57/57，失败和跳过均为 0；实际运行隔离双行业服务验证 Cookie／CSRF、公开出口、预算与队列隔离。100 条真实校准素材已准备，人工标签未完成，精选精准度仍待评测。升级和启用证据位于 NAS `.data/upgrade-20261012/`，受控源码清单位于 `.data/nas-deploy/source-manifest.json`；见 [本轮验收](upstream-alignment-20261012.md) 和 [医疗信源记录](medical-sources-20261012.md)。
+本机后端 781/781，失败与跳过为 0；网页默认 56 通过、1 个平台条件跳过，经典滚动条工况另行 1/1 通过，共覆盖 57 个场景；实际运行隔离双行业服务验证 Cookie／CSRF、公开出口、预算与队列隔离。100 条真实校准素材已准备，人工标签未完成，精选精准度仍待评测。升级和启用证据位于 NAS `.data/upgrade-20261012/`，受控源码清单位于 `.data/nas-deploy/source-manifest.json`；见 [本轮验收](upstream-alignment-20261012.md) 和 [医疗信源记录](medical-sources-20261012.md)。
 
 2026-10-03，按使用者要求直接从源码构建运行，当前没有运行 Radar Docker 容器。
 
