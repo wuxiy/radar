@@ -163,6 +163,7 @@
         "publishedAfter": "2026-10-01T00:00:00Z",
         "fetchPublicContent": true,
         "url": "https://wsjkw.sc.gov.cn/scwsjkw/wj1/wenjian.shtml",
+        "sortByPublishedAt": true,
         "parseMode": "html",
         "itemSelector": "li:has(a[href*=\"/scwsjkw/qtwj/20\"]), li:has(a[href*=\"/scwsjkw/xzgfxwj/20\"])",
         "linkSelector": "a",
