@@ -87,9 +87,7 @@ test("independent process conditions resolve the complete AI and medical packs",
   assert.deepEqual(medical.selection, ai.selection, "unlabelled samples must not change thresholds");
   assert.deepEqual(medical.modules, [], "upstream 4.0 optional modules are not installed");
   assert.equal(medical.path, "/medical/api/site/timeline");
-  assert.equal(medical.sources.length, 8);
-  assert.ok(medical.sources.some((s: { id: string }) => s.id === "web-sichuan-health-documents"));
-  assert.ok(medical.sources.some((s: { id: string }) => s.id === "web-chengdu-phcc-procurement"));
+  assert.deepEqual(medical.sources.map((s: { id: string }) => s.id), ["rss-hit180"], "rejected medical sources stay out of the default pack");
   assert.ok(medical.sources.every((s: { enabled: boolean; site_fulltext: boolean; syndicate_fulltext: boolean }) => !s.enabled && !s.site_fulltext && !s.syndicate_fulltext));
   assert.match(medical.prompt, /高质量数据集/);
   assert.doesNotMatch(medical.prompt, /- 主题：Agent|第一个必须.*模型发布、产品更新/);
