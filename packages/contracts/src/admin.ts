@@ -20,6 +20,24 @@ export interface AdminMe {
   dev: boolean;
 }
 
+export interface AdminPresentationRefresh {
+  revision: number;
+  version: string;
+  ready: boolean;
+  applied: boolean;
+  changed: boolean;
+  reason: string | null;
+  images: { before: number; after: number };
+  links: { before: number; after: number };
+  translation: "absent" | "reused" | "source" | "blocked";
+}
+
+export interface AdminRerun {
+  step: "extract" | "analyze" | "group" | "presentation";
+  preview?: boolean;
+  version?: string;
+}
+
 /** Items waiting for the admin, shown on the navigation: the engine's, and the modules' under their own keys. */
 export type AdminNavCounts = Partial<Record<"feedback" | "sources" | "runs", number>> & Record<string, number | undefined>;
 
@@ -117,7 +135,7 @@ export interface AdminSourceDetail {
   source: AdminSource;
   runs: Array<{
     id: number; started_at: Timestamp; finished_at: Timestamp | null; status: string; found_count: number | null; new_count: number | null; error: string | null;
-    detail: { pages?: number; backlog?: number; dropped?: number } | null;
+    detail: { pages?: number; backlog?: number; dropped?: number; presentationFailures?: Array<{ url: string; error: string }> } | null;
   }>;
   items: Array<{ id: string; title: string; url: string; discovered_at: Timestamp; published_at: Timestamp | null; processing_state: string; selected: boolean | null; visibility: string | null; title_zh: string | null }>;
   stats: { total: number; last7d: number; selected: number };
@@ -234,6 +252,7 @@ export interface AdminFeedbackRow {
   created_at: Timestamp;
   updated_at: Timestamp;
   banned: boolean;
+  email_banned: boolean;
   from_source: number;
 }
 
@@ -241,7 +260,7 @@ export interface AdminFeedback {
   page: number;
   rows: AdminFeedbackRow[];
   counts: Record<string, number>;
-  bans: Array<{ source_hash: string; reason: string | null; created_by: string | null; created_at: Timestamp }>;
+  bans: Array<{ source_hash: string; reason: string | null; created_by: string | null; created_at: Timestamp; expires_at: Timestamp | null }>;
 }
 
 // Runs
@@ -377,7 +396,7 @@ export interface AdminModelConfigurationInput {
 export interface AdminModels {
   configuration: AdminDefaultModel;
   days: number;
-  capabilities: Array<{ key: string; label: string; env: string; defaultModel: string; vision: boolean; current: { model: string; source: "admin" | "env" | "default" }; usage: AdminModelUsage[] }>;
+  capabilities: Array<{ key: string; label: string; env: string; defaultModel: string; vision: boolean; current: { model: string; source: "admin" | "env" | "default" }; fallback: { model: string; primaryPaused: boolean; backupPaused: boolean; nextProbeAt: string | null } | null; usage: AdminModelUsage[] }>;
   choices: Array<{ key: string; service: string; vision: boolean }>;
   history: Array<{ at: Timestamp; actor: string; subject: string; reason: string | null; before: { model: string; source: string } | null; after: { model: string; source: string } | null }>;
   benches: Array<{ id: string; label: string; sample_size: number; prompt_version: string | null; models: string[]; created_at: Timestamp }>;

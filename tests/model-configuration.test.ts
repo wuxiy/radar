@@ -1,4 +1,4 @@
-import { stub, tag } from "./setup.ts";
+import { Reply, stub, tag } from "./setup.ts";
 import assert from "node:assert/strict";
 import { after, test } from "node:test";
 import { mkdtempSync, readFileSync, rmSync, statSync } from "node:fs";
@@ -10,6 +10,9 @@ import { config } from "@aihot/backend/config";
 import { closeDb, sql } from "@aihot/backend/db";
 import { modelConfiguration, updateModelConfiguration } from "@aihot/backend/admin/model-configuration";
 import { defaultModelConfig, modelConfigFile, saveModelConfig } from "@aihot/backend/providers/model-config";
+import { PRESETS } from "@aihot/site/models";
+import { createServer } from "node:http";
+import { once } from "node:events";
 import { chatJson } from "@aihot/backend/providers/llm";
 import { BudgetExceededError } from "@aihot/backend/providers/receipts";
 import { buildApp } from "../apps/api/src/app.ts";
@@ -136,5 +139,57 @@ test("live configuration changes cannot relabel an in-flight request or its rece
     release();
     await slow.close();
     saveModelConfig(previous);
+  }
+});
+
+test("the private model connection keeps its Host, receipt reuse and backup snapshot", async () => {
+  const previous = defaultModelConfig();
+  const hosts: string[] = [];
+  const models: string[] = [];
+  const gateway = createServer((req, res) => {
+    hosts.push(req.headers.host!);
+    let body = "";
+    req.on("data", chunk => { body += chunk; });
+    req.on("end", () => {
+      models.push(JSON.parse(body).model);
+      res.setHeader("content-type", "application/json");
+      res.end(JSON.stringify({ choices: [{ message: { content: '{"ok":true}' } }] }));
+    });
+  });
+  gateway.listen(0, "127.0.0.1"); await once(gateway, "listening");
+  const host = `model-gateway.invalid:${(gateway.address() as { port: number }).port}`;
+  const entered = Promise.withResolvers<void>();
+  const released = Promise.withResolvers<void>();
+  const primary = await stub(async () => { entered.resolve(); await released.promise; return new Reply(503, { error: "local test outage" }); });
+  const preset = PRESETS["qwen3.8-flash"]!;
+  const oldEnv = { base: process.env[preset.baseUrlEnv], key: process.env[preset.apiKeyEnv] };
+  try {
+    await updateModelConfiguration({ ...input, apiKey: "", perMinute: 100, perHour: 100, perDay: 100 }, "test");
+    saveModelConfig({ ...previous, baseUrl: `http://${host}/v1`, connectIp: "127.0.0.1", model: "pinned-model" });
+    const opts = { model: "default", purpose: "invariant_test", subject: `pinned-${T}`, promptVersion: "t1", system: "test", user: "local-only", schema: z.object({ ok: z.boolean() }) };
+    const first = await chatJson(opts);
+    assert.equal((await chatJson(opts)).receiptId, first.receiptId);
+    assert.deepEqual(hosts, [host]);
+    process.env[preset.baseUrlEnv] = `${primary.url}/v1`;
+    process.env[preset.apiKeyEnv] = "test-key";
+    const pending = chatJson({ ...opts, model: "qwen3.8-flash", fallbackModel: "default", user: "backup-local-only", subject: `pinned-backup-${T}` });
+    await Promise.race([entered.promise, pending.then(() => assert.fail("primary returned before its local request"))]);
+    saveModelConfig({ ...previous, model: "changed-after-routing" });
+    released.resolve();
+    const result = await pending;
+    assert.equal(result.model, "default");
+    assert.deepEqual(hosts, [host, host]);
+    assert.deepEqual(models, ["pinned-model", "pinned-model"]);
+    const [attempt] = await sql`SELECT model FROM receipt_attempts WHERE receipt_id = ${result.receiptId}`;
+    assert.equal(attempt!.model, "pinned-model");
+  } finally {
+    released.resolve();
+    saveModelConfig(previous);
+    for (const [key, value] of [[preset.baseUrlEnv, oldEnv.base], [preset.apiKeyEnv, oldEnv.key]]) {
+      if (value === undefined) delete process.env[key!]; else process.env[key!] = value;
+    }
+    await primary.close();
+    gateway.closeAllConnections();
+    await new Promise<void>(resolve => gateway.close(() => resolve()));
   }
 });

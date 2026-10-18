@@ -47,6 +47,12 @@
 
 NAS 操作证据位于 `.data/medical-activation-20261006/`，包括采集结果、模型连接补丁哈希及最终状态；本机同名目录保存本轮回归日志。凭据不写入日志。模型选择与预算确认后，启用医疗 `llm` 预算与模型阀门，再验收真实采集→处理→发布链路。
 
+## 原生服务停机配置
+
+本次上游 worker 最多等待 470 秒排空；`deploy/radar/run.ts` 父进程在 510 秒后才强制结束未退出子进程。三个 Radar systemd 服务必须设置 `TimeoutStopSec=515`、`KillMode=mixed`，让 SIGTERM 先到父进程，再由父进程通知行业子进程，避免 systemd 提前杀掉正在备份或处理回执的任务。修改后执行 `systemctl daemon-reload`，用 `systemctl show radar-api radar-worker radar-web -p TimeoutStopUSec -p KillMode` 核验实际值，再停止服务更新源码。
+
+升级保留 `.env`、行业私有凭据、模型文件和数据目录；两库分别运行迁移。2026-10-18 的五个新迁移包含删除已停用的临时 `translation_attempts.request_tag` 列，其他翻译记录与回执保留；历史 `articles.publication_time` 为空代表精度未知，不自动回填为日期或时刻。
+
 ## 当前服务
 
 - SSH：`dev@cywu.heiyu.space:1822`。

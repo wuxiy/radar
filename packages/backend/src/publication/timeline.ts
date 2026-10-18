@@ -33,7 +33,7 @@ function binding(q: TimelineQuery): string {
 
 /**
  * Public pool reports linked to the given facts, under the same
- * filters (non-selected included): the sets "另有 N 家信源报道" expands and the group counts come from.
+ * filters (non-selected included): the sets "另外 N 家也报道了" expands and the group counts come from.
  */
 async function groupPool(q: TimelineQuery, now: Date, factIds: number[]) {
   if (!factIds.length) return [];
@@ -138,6 +138,7 @@ export async function loadTimeline(q: TimelineQuery): Promise<Omit<TimelineRespo
       factId: factInfo.get(factId)?.public_id ?? String(factId),
       additionalSourceCount: new Set(reports.filter((r) => r.source_id !== repSource).map((r) => r.source_id)).size,
       reportCount: new Set(reports.map((r) => r.article_id)).size,
+      memberIds: [...new Set(candidates.map((m) => m.id))],
     };
     const showGroup = group.reportCount > 1;
     planned.push({ key: g.gk, anchorAt: g.anchor_at.toISOString(), id: rep.id, group: showGroup ? group : null });

@@ -52,7 +52,7 @@ if (role === "setup") {
       processChild.kill("SIGTERM");
       return exit;
     });
-    const force = setTimeout(() => { for (const processChild of children) processChild.kill("SIGKILL"); }, 210_000);
+    const force = setTimeout(() => { for (const processChild of children) processChild.kill("SIGKILL"); }, 510_000);
     await Promise.all(exited);
     clearTimeout(force);
     process.exit(0);

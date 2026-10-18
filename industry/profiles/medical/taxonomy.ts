@@ -8,36 +8,42 @@ export { ITEM_TYPES } from "../../taxonomy.ts";
 export const CATEGORIES = [
   {
     "key": "medical-it",
+    "tagColor": "indigo",
     "label": "医疗信息化",
     "section": "医疗信息化",
     "guide": "PACS/RIS、影像云、电子处方、区域卫生系统、检查检验互认、医院业务协同"
   },
   {
     "key": "medical-data",
+    "tagColor": "turquoise",
     "label": "医疗数据平台",
     "section": "医疗数据平台",
     "guide": "数据治理、互联互通、主数据、科研数据平台、可信数据空间"
   },
   {
     "key": "medical-datasets",
+    "tagColor": "green",
     "label": "高质量数据集",
     "section": "高质量数据集",
     "guide": "病种和任务场景、数据生产、标注、质控、验证、交付与版本更新"
   },
   {
     "key": "medical-ai",
+    "tagColor": "violet",
     "label": "医疗 AI 应用",
     "section": "医疗 AI 应用",
     "guide": "有明确医疗场景的模型、产品、部署与评测；明确证据和适用边界"
   },
   {
     "key": "policy-standards",
+    "tagColor": "orange",
     "label": "政策与标准",
     "section": "政策与标准",
     "guide": "与医疗信息化、医疗数据和医疗 AI 项目相关的政策、标准、指南与版本变化"
   },
   {
     "key": "industry",
+    "tagColor": "purple",
     "label": "产业与产品",
     "section": "产业与产品",
     "guide": "有项目关联和实质信息的产品、合作、采购、交付和行业变化"
@@ -75,7 +81,7 @@ export const CATEGORY_BY_ITEM_TYPE: Readonly<Record<string,string>> = {
   "tutorial_explainer": "行业解读"
 };
 
-export const ENTITIES: Record<string,{name:string;displayTag:string|null;aliases:string[];otherNames?:string[]}> = {
+export const ENTITIES: Record<string,{name:string;displayTag:string|null;aliases:string[];otherNames?:string[];orgNames?:string[]}> = {
   "chima": {
     "name": "CHIMA",
     "displayTag": "CHIMA",

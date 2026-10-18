@@ -272,6 +272,7 @@ export default function SourceDetail({ loaderData }: { loaderData: AdminSourceDe
                     <span className="inline-flex gap-1">
                       <Badge tone={r.status === "ok" ? "ok" : r.status === "failed" ? "bad" : "muted"} title={r.error ?? undefined}>{r.status}</Badge>
                       {!!r.detail?.dropped && <Badge tone="bad" title="有一段更早的帖子没能读完，其中的内容可能漏采">可能漏采</Badge>}
+                      {!!r.detail?.presentationFailures?.length && <Badge tone="warn" title={r.detail.presentationFailures.map(f => `${f.url}: ${f.error}`).join("\n")}>正文展示待处理 {r.detail.presentationFailures.length}</Badge>}
                       {!r.detail?.dropped && !!r.detail?.backlog && <Badge tone="warn" title="帖子多于一轮能读的页数，余下的在后面几轮接着读">续读 {r.detail.backlog} 段</Badge>}
                     </span>
                   ),
