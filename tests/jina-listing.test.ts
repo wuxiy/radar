@@ -166,4 +166,3 @@ test("a received Jina page with NUL persists its receipt and reuses it without a
   const attempts = await sql`SELECT status FROM receipt_attempts WHERE receipt_id = ${first.receiptId}`;
   assert.deepEqual(attempts.map(row => row.status), ["received"]);
 });
-
