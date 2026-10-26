@@ -11,6 +11,7 @@ import { startWebServer, type WebServer } from "./web-server.ts";
 let ai: WebServer, medical: WebServer;
 let gateway: ReturnType<typeof createGateway>;
 let origin: string;
+const canonicalOrigin = "https://radar.example.test";
 
 function api(industry: string) {
   return createServer((req, res) => {
@@ -31,8 +32,8 @@ function api(industry: string) {
 }
 
 before(async () => {
-  ai = await startWebServer(api("ai"), { NODE_OPTIONS: "--conditions=radar-ai" });
-  medical = await startWebServer(api("medical"), { NODE_OPTIONS: "--conditions=medical" });
+  ai = await startWebServer(api("ai"), { NODE_OPTIONS: "--conditions=radar-ai", SITE_URL: `${canonicalOrigin}/ai` });
+  medical = await startWebServer(api("medical"), { NODE_OPTIONS: "--conditions=medical", SITE_URL: `${canonicalOrigin}/medical` });
   gateway = createGateway({ ai: ai.port, medical: medical.port });
   gateway.listen(0, "127.0.0.1"); await once(gateway, "listening");
   origin = `http://127.0.0.1:${(gateway.address() as { port: number }).port}`;
@@ -81,7 +82,7 @@ test("signed-in industry login preserves unified management and scoped admin des
       const response = await fetch(`${origin}/${industry}/admin/login?return=${encodeURIComponent(target)}`, { headers: { cookie }, redirect: "manual" });
       assert.equal(response.status, 302);
       const destination = new URL(response.headers.get("location")!, origin);
-      assert.equal(destination.origin, origin);
+      assert.equal(destination.origin, expected.startsWith("/manage/") ? canonicalOrigin : origin, "the proxy request host cannot replace the configured HTTPS origin");
       assert.equal(destination.pathname + destination.search, expected);
       assert.match(response.headers.get("cache-control")!, /no-store/);
       await response.text();

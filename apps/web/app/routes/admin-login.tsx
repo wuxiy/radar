@@ -22,8 +22,8 @@ export async function loader({ request }: Route.LoaderArgs) {
   const returnTo = localPath(url.searchParams.get("return") ?? "/admin");
   const management = PROFILE.basePath ? sourceManagementReturn(returnTo, PROFILE.id) : null;
   const target = management ?? (/^\/admin(?:\/|\?|$)/.test(returnTo) ? returnTo : "/admin");
-  // An absolute same-origin URL bypasses React Router's industry basename for the shared console.
-  if (await adminSignedIn(request).catch(() => false)) throw redirect(management ? new URL(management, request.url).href : target);
+  // The configured public origin survives a reverse proxy rewriting Host to its loopback target.
+  if (await adminSignedIn(request).catch(() => false)) throw redirect(management ? new URL(management, process.env.SITE_URL || request.url).href : target);
   const options = await apiGet<{ password: boolean; feishu: boolean; oidc: boolean; oidcUrl: string | null }>("/api/auth/options", { signal: request.signal }).catch(() => ({ password: true, feishu: false, oidc: false, oidcUrl: null }));
   return { returnTo: target, error: url.searchParams.get("error"), ...options };
 }
