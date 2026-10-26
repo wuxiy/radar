@@ -1,5 +1,7 @@
 # NAS 源码部署记录
 
+2026-10-26：已对齐上游 `ce83484`，运行代码合并 `a4fa8dd`，公开 HTTPS 登录回跳修复 `a52c645`。NAS 原生源码构建完成，三个服务和六个行业子进程均使用 `/home/dev/.local/share/node-v24.22.1-linux-x64/bin/node`；旧运行时保留给其他应用。两库仍各 68 条迁移，seed 新增 0，三服务 active，停止参数 515 秒／KillMode=mixed。7 份私有配置、来源和预算指纹一致，785 个源码文件登记指纹；医疗有效来源 1、已删除 10。最终公网 smoke 各 30/30，桌面／手机匿名和管理会话浏览器验收通过；本机后端 977/977、网页 72/72、依赖审计 0。真人 IdP 登录未重跑。详见 [本轮验收](upstream-alignment-20261026.md)，证据位于 `.data/upgrade-20261026/`。下方为历史快照。
+
 2026-10-18：已纳入上游 `4947ad0`（合并代码 `3ee0c98`），原生源码安装与双行业／统一管理构建完成。两库各 68 条迁移，三服务 active；停止参数均为 515 秒、KillMode=mixed。7 份私有配置指纹、来源和预算保留，医疗有效来源仍只有 HIT RSS，10 个已删除来源未恢复。AI／医疗真实 HTTPS smoke 各 30/30，桌面和手机精选、未读、行业切换、管理与 OIDC 入口通过；本机后端 960/960、网页 66/66。真人 IdP 登录未重跑，未新增医疗信源或使用外部模型重新评估内容专业度。见 [本轮验收](upstream-alignment-20261018.md)，证据位于 `.data/upgrade-20261018/`。下方为历史快照。
 
 
@@ -60,7 +62,7 @@ NAS 操作证据位于 `.data/medical-activation-20261006/`，包括采集结果
 
 - SSH：`dev@cywu.heiyu.space:1822`。
 - 目录：`/home/dev/workspace/cywu/radar`。
-- Node：已有的 `v24.12.0`，路径 `/home/dev/.local/share/node-v24.12.0-linux-x64/bin/node`。
+- Node：`v24.22.1`，路径 `/home/dev/.local/share/node-v24.22.1-linux-x64/bin/node`。三个服务通过 `runtime.conf` 同时覆盖 ExecStart 与 PATH；升级不能只改交互式 shell 的 PATH。
 - 常驻服务：`radar-api.service`、`radar-worker.service`、`radar-web.service`，均已启动并设置开机运行。
 - 前端：`0.0.0.0:13300`；两个 API 为回环端口 13301/13302，两个页面进程为回环端口 13303/13304。
 - PostgreSQL：已迁移至 NAS 的 `127.0.0.1:5432`，实例为 `/home/dev/svc/postgres` 部署的 PostgreSQL 18.6；AI 使用 `radar_nas_ai` / `radar_ai_app`，医疗使用 `radar_nas_medical` / `radar_medical_app`。两账号不是超级用户，没有创建数据库或角色的权限，分别只能连接自己的行业库，连接数上限各 25。
