@@ -14,7 +14,7 @@ for (const industry of industries) if (!/_(test|ci)$/.test(new URL(industry.env.
 async function fixture(industry: typeof industries[number], action: string) {
   const result = await run(process.execPath, [`--conditions=${industry.condition}`, "tests/radar-runtime-fixture.ts", action], { env: industry.env });
   // The queue also writes diagnostic JSON while it drains. Read only the fixture's result record.
-  if (action === "seed" || action === "isolation") {
+  if (action === "seed" || action === "isolation" || action === "provider-cooldown") {
     const prefix = "RADAR_FIXTURE_RESULT ";
     const line = result.stdout.split(/\r?\n/).find(line => line.startsWith(prefix));
     assert.ok(line, `${industry.id} ${action}: fixture result missing`);
@@ -74,10 +74,18 @@ try {
     assert.equal((await request(id, "/api/admin/sources", { headers: { cookie } })).status, 200);
     assert.equal((await request(other, "/api/admin/sources", { headers: { cookie } })).status, 401);
     assert.equal((await request(id, "/api/admin/sources", { method: "POST", headers: { cookie, "content-type": "application/json" }, body: "{}" })).status, 403);
+    const management = `/manage/sources?industry=${id}`;
+    const skip = await request(id, `/api/auth/login?return=${encodeURIComponent(management)}`, { headers: { cookie } });
+    assert.equal(skip.status, 302); assert.equal(skip.headers.get("location"), management);
+    const signedPage = await request(id, `/admin/login?return=${encodeURIComponent(management)}`, { headers: { cookie } });
+    assert.equal(signedPage.status, 302); assert.equal(new URL(signedPage.headers.get("location")!, base).href, new URL(management, base).href);
+    const oversized = await request(id, "/api/auth/logout", { method: "POST", headers: { cookie, "content-type": "application/x-www-form-urlencoded" }, body: `x=${"a".repeat(20_000)}` });
+    assert.equal(oversized.status, 413);
+    assert.equal((await request(id, "/api/auth/check", { headers: { cookie } })).status, 204);
     const anonymous = await (await request(id, "/api/v1/items")).json();
     const authenticated = await (await request(id, "/api/v1/items", { headers: { cookie } })).json();
     assert.deepEqual(authenticated, anonymous);
-    assert.equal((await request(id, "/api/auth/logout", { method: "POST", headers: { cookie } })).status, 303);
+    assert.equal((await request(id, "/api/auth/logout", { method: "POST", headers: { cookie, "content-type": "application/x-www-form-urlencoded" }, body: "" })).status, 303);
     assert.equal((await request(id, "/api/admin/sources", { headers: { cookie } })).status, 401);
     console.log(`PASS ${id}: API/RSS/report scope, hidden content, fulltext rights, categories, scoped admin session and CSRF`);
     const searchRedirect = await request(id, "/?q=acceptance");
@@ -99,6 +107,10 @@ try {
     assert.equal(Number((await db`SELECT count(*) n FROM receipts WHERE service = 'radar-acceptance-local-mock'`)[0].n), index === 0 ? 0 : 1);
   }
   console.log("PASS AI test budget stopped while medical mock succeeds; receipts and queue jobs stay in their own databases");
+  const cooldowns = await Promise.all(industries.map(industry => fixture(industry, "provider-cooldown")));
+  assert.deepEqual(cooldowns.map(value => value.blocked), [true, false]);
+  assert.equal(Number((await connections[1]`SELECT count(*) AS n FROM settings WHERE key LIKE 'provider.stop.radar-acceptance-cooldown%'`)[0].n), 0);
+  console.log("PASS provider cooldown stops the AI model while the same medical model remains callable");
 } finally {
   if (!keep) await Promise.all(industries.map(industry => fixture(industry, "cleanup")));
   await Promise.all(connections.map(db => db.end()));

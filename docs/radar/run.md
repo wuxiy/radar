@@ -2,7 +2,7 @@
 
 ## 本机
 
-需要 Node.js 24.11+、两个不同的 PostgreSQL 数据库。`SITE_URL` 填公共根地址，不带 `/ai` 或 `/medical`。配置中只保存连接地址，行业由进程启动参数决定。
+需要 Node.js 24.22.1+、两个不同的 PostgreSQL 数据库。`SITE_URL` 填公共根地址，不带 `/ai` 或 `/medical`。配置中只保存连接地址，行业由进程启动参数决定。
 
 ```bash
 cp .env.radar.example .env

@@ -8,9 +8,12 @@ import http from "node:http";
 import { after, before, test } from "node:test";
 import { config } from "@aihot/backend/config";
 import { closeDb, sql } from "@aihot/backend/db";
-import { extractArticleBody, readable } from "@aihot/backend/content/extract";
+import { extractArticleBody, extractFromUrl, readable } from "@aihot/backend/content/extract";
 import { upsertMaterial } from "@aihot/backend/content/materials";
 import { jinaRead } from "@aihot/backend/providers/jina";
+import { stopBoss } from "@aihot/backend/jobs/queue";
+import { collectSource } from "@aihot/backend/sources/collect";
+import { previewSource } from "@aihot/backend/admin/sources";
 import { fetchDetail, fetchWebList } from "@aihot/backend/sources/web-list";
 
 const T = tag();
@@ -20,6 +23,8 @@ const missing = "We couldn't find the page you were looking for. This is either 
 const challenge = "example.org Performing security verification This website uses a security service to protect against malicious bots. This page is displayed while the website verifies you are not a bot. Verification successful. Waiting for example.org to respond. Performance and Security by Cloudflare.";
 const prose = "A real report explains why a service returned 404 and how CAPTCHA verification affects its users. ".repeat(8);
 const html = (title: string, text: string) => `<html><head><title>${title}</title><meta name="description" content="False description"></head><body><article><h1>${title}</h1><p>${text}</p><a href="/news/post">Navigation item</a></article></body></html>`;
+const signInPage = html("Sign in to Example", "Sign in to your account. Enter your email address and password to continue. ".repeat(6));
+const autofill = "A real report explains how password managers fill a sign-in form and why autofill is safer than typing. ".repeat(4);
 let readerHits = 0;
 const readerPages: Record<string, string> = {
   missing: `Title: 404 Not Found | Example\n\nMarkdown Content:\n${navigation}\n404 Page Not Found\nThat page does not exist.\n${navigation}`,
@@ -29,11 +34,23 @@ const readerPages: Record<string, string> = {
   valid: `Title: Why 404 errors happen\nWarning: This is a cached snapshot of the original page.\n\nMarkdown Content:\n${prose}\n\nWarning: Target URL returned error 404: Not Found`,
 };
 const server = http.createServer((req, res) => {
+  // The redirect has to answer before the default headers: a source URL the site sends to its sign-in form.
+  if (req.url === "/protected-list") return void res.writeHead(200, { "content-type": "text/html" }).end('<article><a href="/redirect">Original protected article</a></article>');
+  if (req.url === "/redirect") { res.writeHead(302, { location: "/login" }); return void res.end(); }
+  if (req.url === "/brand/register") { res.writeHead(301, { location: "/brand/register/" }); return void res.end(); }
   res.writeHead(200, { "content-type": req.url?.startsWith("/reader/") ? "text/plain" : "text/html", "x-usage-tokens": "100" });
   if (req.url?.startsWith("/reader/")) {
     readerHits++;
     return void res.end(readerPages[req.url.split("/").at(-1)!] ?? readerPages.missing);
   }
+  // The form itself is long enough to be mistaken for a body by the length and density checks.
+  if (req.url === "/article") return void res.end(html("Password autofill in browsers", autofill));
+  if (req.url === "/login") return void res.end(signInPage);
+  if (req.url === "/brand/register/") return void res.end(html("The certified products register", prose));
+  if (req.url === "/listing") return void res.end(`<html><body>
+    <article><a href="/article">Password autofill in browsers</a></article>
+    <nav><a href="/login">Log in</a><a href="/signup">Sign up</a></nav>
+  </body></html>`);
   res.end(html("404 Not Found | Example", navigation));
 });
 await new Promise<void>(resolve => server.listen(0, "127.0.0.1", resolve));
@@ -45,7 +62,7 @@ before(async () => {
   await sql`INSERT INTO sources(id,name,kind) VALUES (${sourceId},'Error page regression','rss')`;
   await sql`UPDATE budgets SET per_minute=1000,per_hour=1000,per_day=1000 WHERE service='jina'`;
 });
-after(async () => { server.close(); await closeDb(); });
+after(async () => { server.close(); await stopBoss(); await closeDb(); });
 
 test("soft 404 and security interstitials cannot become native article bodies", () => {
   for (const page of [html("404 Not Found | Example", navigation), html("Just a moment...", challenge),
@@ -82,4 +99,49 @@ test("a native soft error supplies neither listing items nor detail title, date 
   const source = { id: sourceId, config: { url: `${base}/missing`, parseMode: "html", itemSelector: "article", titleSelector: "h1", detail: { titleSelector: "h1", summarySelector: 'meta[name="description"]' } } } as never;
   await assert.rejects(fetchWebList(source), /unavailable page/i);
   await assert.rejects(fetchDetail(`${base}/missing`, source, { title: true, date: true, summary: true, body: true }), /unavailable page/i);
+});
+
+// A redirect to the site's sign-in form is an error page too: the form's length and density pass the
+// body checks, and a source that builds arxiv.org URLs once stored HuggingFace's login page as the
+// article body (its navigation changed between fetches, so it became 26 revisions of a title "220").
+test("a redirect to a sign-in form cannot become the body", async () => {
+  // Without the redirect check this page is accepted: it is long enough and reads like an article.
+  assert.ok(readable(signInPage, `${base}/login`), "the sign-in form passes the body checks — that is the trap");
+  assert.equal(await extractFromUrl(`${base}/redirect`, `article:${T}:signin`, {}, { paidFallback: false }), null);
+  // An article that merely mentions signing in and passwords is still an article.
+  const got = await extractFromUrl(`${base}/article`, `article:${T}:autofill`, {}, { paidFallback: false });
+  assert.ok(got?.text.includes("password managers"), "text about sign-in forms is not a sign-in redirect");
+  // A page that is itself on such a path and only gains a trailing slash was not sent to sign in.
+  const registry = await extractFromUrl(`${base}/brand/register`, `article:${T}:registry`, {}, { paidFallback: false });
+  assert.ok(registry?.text.includes("real report"), "a redirect between two addresses of the same page is no sign-in redirect");
+});
+
+// A listing's navigation links to the site's sign-in and registration pages; they are not posts.
+test("a listing's sign-in links are not articles", async () => {
+  const source = { id: sourceId, config: { url: `${base}/listing`, parseMode: "html", itemSelector: "a[href]", linkSelector: "a[href]" } } as never;
+  const candidates = await fetchWebList(source);
+  assert.deepEqual(candidates.map((c) => c.url).sort(), [`${base}/article`]);
+});
+
+test("a protected detail page supplies no metadata or body in preview or collection", async () => {
+  const detail = { maxFetches: 2, titleSelector: "h1", titleAuthoritative: true, summarySelector: 'meta[name="description"]' };
+  const source = { id: `protected-detail-${T}`, kind: "web_list", config: { url: `${base}/protected-list`, itemSelector: "article", linkSelector: "a", detail } } as const;
+  for (const need of [{ title: true, date: true, summary: true, body: true }, { title: true, date: false, summary: false }, { title: false, date: true, summary: false }]) {
+    await assert.rejects(fetchDetail(`${base}/redirect`, source as never, need), /sign-in form/);
+  }
+  await assert.rejects(previewSource(source), /sign-in form/);
+  await sql`INSERT INTO sources (id,name,kind,config,tier,next_fetch_at) VALUES (${source.id},'Protected test','web_list',${sql.json(source.config)},'T2','2100-01-01')`;
+  assert.equal((await collectSource(source.id, { force: true })).status, "ok");
+  const rows = await sql`SELECT title, excerpt, body_text, body_html, body_status FROM articles WHERE source_id = ${source.id}`;
+  assert.equal(rows.length, 1, "the original listing remains available");
+  assert.ok(rows.every(row => row.title === "Original protected article" && !row.body_text && !row.body_html && row.body_status !== "ok"), "only listing data may remain; the login form never becomes article evidence");
+});
+
+test("detail pages on a register path and articles about sign-in remain readable", async () => {
+  const source = { id: sourceId, config: { detail: { titleSelector: "h1" } } } as never;
+  const need = { title: true, date: true, summary: false, body: true };
+  const register = await fetchDetail(`${base}/brand/register`, source, need);
+  assert.ok(register.body?.text.includes("real report"));
+  const article = await fetchDetail(`${base}/article`, source, need);
+  assert.ok(article.body?.text.includes("password managers"));
 });

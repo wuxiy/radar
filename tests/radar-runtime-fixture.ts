@@ -8,7 +8,7 @@ import { sql, closeDb } from "@aihot/backend/db";
 import { upsertMaterial } from "@aihot/backend/content/materials";
 import { publishArticle } from "@aihot/backend/publication/publish";
 import { getBoss, stopBoss } from "@aihot/backend/jobs/queue";
-import { paidRequest, BudgetExceededError } from "@aihot/backend/providers/receipts";
+import { paidRequest, BudgetExceededError, assertAccepted, ProviderRejectedError } from "@aihot/backend/providers/receipts";
 
 if (!PROFILE.basePath || !/_(test|ci)$/.test(new URL(process.env.DATABASE_URL!).pathname)) throw new Error("Radar fixtures require an isolated *_test or *_ci database and an explicit industry condition");
 const source = `radar-${PROFILE.id}-fixture`;
@@ -46,10 +46,25 @@ try {
     await sql`DELETE FROM reports WHERE kind = 'daily' AND key = ${date} AND origin = 'manual'`;
     await sql`DELETE FROM articles WHERE source_id = ${source}`;
     await sql`DELETE FROM sources WHERE id = ${source}`;
-    await sql`DELETE FROM receipts WHERE service = 'radar-acceptance-local-mock'`;
-    await sql`DELETE FROM budgets WHERE service = 'radar-acceptance-local-mock'`;
+    await sql`DELETE FROM receipts WHERE service IN ('radar-acceptance-local-mock', 'radar-acceptance-cooldown')`;
+    await sql`DELETE FROM budgets WHERE service IN ('radar-acceptance-local-mock', 'radar-acceptance-cooldown')`;
     const boss = await getBoss();
     await boss.deleteQueue("radar.acceptance");
+    await sql`DELETE FROM settings WHERE key LIKE 'provider.stop.radar-acceptance-cooldown%'`;
+  } else if (process.argv[2] === "provider-cooldown") {
+    const service = "radar-acceptance-cooldown";
+    await sql`INSERT INTO budgets (service,per_minute,per_hour,per_day) VALUES (${service},100,100,100) ON CONFLICT (service) DO NOTHING`;
+    const request = { service, model: "same-model", purpose: "local-cooldown", identity: "first" };
+    let calls = 0;
+    if (PROFILE.id === "ai") {
+      await assert.rejects(paidRequest(request, async () => { calls++; assertAccepted(service,402,'{"error":{"message":"insufficient balance"}}'); return { response: null }; }), ProviderRejectedError);
+      await assert.rejects(paidRequest({ ...request, identity: "second" }, async () => { calls++; return { response: {} }; }), BudgetExceededError);
+      assert.equal(calls, 1);
+    } else {
+      await paidRequest(request, async () => { calls++; return { response: { ok: true } }; });
+      assert.equal(calls, 1);
+    }
+    console.log(`RADAR_FIXTURE_RESULT ${JSON.stringify({ industry: PROFILE.id, calls, blocked: PROFILE.id === "ai" })}`);
   } else if (process.argv[2] === "isolation") {
     const service = "radar-acceptance-local-mock";
     await sql`DELETE FROM receipts WHERE service = ${service}`;
