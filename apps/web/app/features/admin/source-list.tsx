@@ -11,7 +11,8 @@ import { useSourceDraftGuard, useSourceManagement, useSourcePath } from "./sourc
 export default function Sources({ loaderData }: { loaderData: AdminSources }) {
   const sourcePath = useSourcePath();
   const management = useSourceManagement();
-  const { rows, totals, page } = loaderData;
+  const { rows, totals, page, useLabels } = loaderData;
+  const selectionClassLabels = loaderData.selectionClassLabels ?? {};
   const [sp] = useSearchParams();
   const navigate = useNavigate();
   return (
@@ -30,7 +31,7 @@ export default function Sources({ loaderData }: { loaderData: AdminSources }) {
         <div className="flex flex-col gap-3 border-b border-line p-3 lg:flex-row lg:items-center lg:justify-between">
           <Form method="get" className="flex w-full max-w-md gap-2" preventScrollReset>
             {management && <input type="hidden" name="industry" value={management.industry} />}
-            {["kind", "health", "mode"].map((k) => sp.get(k) && <input key={k} type="hidden" name={k} value={sp.get(k)!} />)}
+            {["kind", "health", "mode", "use"].map((k) => sp.get(k) && <input key={k} type="hidden" name={k} value={sp.get(k)!} />)}
             <Input name="q" defaultValue={sp.get("q") ?? ""} placeholder="名称、ID 或地址" aria-label="搜索信源" />
           </Form>
           <div className="flex flex-wrap items-center gap-3">
@@ -52,6 +53,9 @@ export default function Sources({ loaderData }: { loaderData: AdminSources }) {
                 <option key={k} value={k}>{v}</option>
               ))}
             </Select>
+            {Object.keys(useLabels).length > 0 && <Select aria-label="用途" className="!w-auto" value={sp.get("use") ?? ""} onChange={e => {
+              const next = new URLSearchParams(sp); if (e.target.value) next.set("use", e.target.value); else next.delete("use"); next.delete("page"); navigate(`?${next}`, { preventScrollReset: true });
+            }}><option value="">全部用途</option>{Object.entries(useLabels).map(([k,v]) => <option key={k} value={k}>{v}</option>)}</Select>}
           </div>
         </div>
         <DataTable
@@ -79,6 +83,8 @@ export default function Sources({ loaderData }: { loaderData: AdminSources }) {
               render: (r) => (
                 <div className="flex gap-1">
                   <Badge tone={r.participation_mode === "editorial" ? "accent" : "muted"}>{MODE_LABEL[r.participation_mode] ?? r.participation_mode}</Badge>
+                  {r.uses.map(u => <Badge key={u} tone="info">{useLabels[u] ?? u}</Badge>)}
+                  {r.selection_class && <Badge tone="muted">{selectionClassLabels[r.selection_class] ?? r.selection_class}</Badge>}
                   <Badge tone="info">{r.tier.replace("_", ".")}</Badge>
                   {r.first_party && <Badge tone="ok">一手</Badge>}
                 </div>

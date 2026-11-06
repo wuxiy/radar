@@ -28,7 +28,8 @@
     "radar:api": "node --env-file-if-exists=.env deploy/radar/run.ts api",
     "radar:worker": "node --env-file-if-exists=.env deploy/radar/run.ts worker",
     "radar:web": "node --env-file-if-exists=.env deploy/radar/run.ts web",
-    "radar:verify": "node --env-file-if-exists=.env scripts/verify-radar.ts"
+    "radar:verify": "node --env-file-if-exists=.env scripts/verify-radar.ts",
+    "test:web": "node --test --test-concurrency=1 \"apps/web/tests/*.test.ts\""
   },
   "devDependencies": {
     "@modelcontextprotocol/client": "2.3.0",

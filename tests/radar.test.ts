@@ -84,7 +84,10 @@ test("independent process conditions resolve the complete AI and medical packs",
   assert.equal(ai.name, "Radar"); assert.equal(medical.name, "Radar");
   assert.ok(ai.categories.includes("ai-models"));
   assert.deepEqual(medical.categories, ["medical-it", "medical-data", "medical-datasets", "medical-ai", "policy-standards", "industry"]);
-  assert.deepEqual(medical.selection, ai.selection, "unlabelled samples must not change thresholds");
+  assert.deepEqual(medical.selection.thresholds, ai.selection.thresholds, "unlabelled samples must not change thresholds");
+  assert.equal(medical.selection.understandFloor, ai.selection.understandFloor);
+  assert.deepEqual(medical.selection.classes, {}, "AI source classes must not change medical selection");
+  assert.equal(medical.selection.browseFloor, 0, "medical all-dynamics visibility stays unchanged");
   assert.deepEqual(medical.modules, [], "upstream 4.0 optional modules are not installed");
   assert.equal(medical.path, "/medical/api/site/timeline");
   assert.deepEqual(medical.sources.map((s: { id: string }) => s.id), ["rss-hit180"], "rejected medical sources stay out of the default pack");

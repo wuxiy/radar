@@ -6,6 +6,7 @@ import { industryPath } from "@aihot/industry/paths";
 import { redirect, useLoaderData } from "react-router";
 import type { Route } from "./+types/admin-login";
 import { SITE } from "@aihot/site";
+import { safeReturn as safeLocalReturn, SIGN_IN_HOME } from "@aihot/contracts/admin";
 import { apiGet } from "../lib/api.server";
 import { adminSignedIn } from "../lib/admin.server";
 import { Wordmark } from "@aihot/site/brand/Logo.tsx";
@@ -19,11 +20,12 @@ const ERRORS: Record<string, string> = {
 
 export async function loader({ request }: Route.LoaderArgs) {
   const url = new URL(request.url);
-  const returnTo = localPath(url.searchParams.get("return") ?? "/admin");
+  const returnTo = localPath(url.searchParams.get("return") ?? SIGN_IN_HOME);
   const management = PROFILE.basePath ? sourceManagementReturn(returnTo, PROFILE.id) : null;
-  const target = management ?? (/^\/admin(?:\/|\?|$)/.test(returnTo) ? returnTo : "/admin");
+  const safe = safeLocalReturn(returnTo);
+  const target = management && management.length <= 2000 ? management : (/^\/admin(?:\/|\?|$)/.test(safe) ? safe : SIGN_IN_HOME);
   // The configured public origin survives a reverse proxy rewriting Host to its loopback target.
-  if (await adminSignedIn(request).catch(() => false)) throw redirect(management ? new URL(management, process.env.SITE_URL || request.url).href : target);
+  if (await adminSignedIn(request).catch(() => false)) throw redirect(management && target === management ? new URL(management, process.env.SITE_URL || request.url).href : target);
   const options = await apiGet<{ password: boolean; feishu: boolean; oidc: boolean; oidcUrl: string | null }>("/api/auth/options", { signal: request.signal }).catch(() => ({ password: true, feishu: false, oidc: false, oidcUrl: null }));
   return { returnTo: target, error: url.searchParams.get("error"), ...options };
 }

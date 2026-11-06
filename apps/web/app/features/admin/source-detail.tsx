@@ -14,7 +14,7 @@ import { AdminPage, Badge, Button, ButtonLink, Card, DataTable, Dot, Empty, Fiel
 import { useSourceDraftGuard, useSourceManagement, useSourcePath } from "./source-context";
 import { SOURCE_INDUSTRY_LABEL } from "@aihot/contracts/source-management";
 
-type Draft = Pick<AdminSource, "name" | "kind" | "interval_minutes" | "tier" | "participation_mode" | "signal_group_id" | "first_party" | "owner_entity_id" | "site_fulltext" | "syndicate_fulltext"> & { tags: string; config: string };
+type Draft = Pick<AdminSource, "name" | "kind" | "interval_minutes" | "tier" | "selection_class" | "uses" | "participation_mode" | "signal_group_id" | "first_party" | "owner_entity_id" | "site_fulltext" | "syndicate_fulltext"> & { tags: string; config: string };
 
 function draftOf(s: AdminSource): Draft {
   return {
@@ -22,6 +22,8 @@ function draftOf(s: AdminSource): Draft {
     kind: s.kind,
     interval_minutes: s.interval_minutes,
     tier: s.tier,
+    selection_class: s.selection_class,
+    uses: s.uses,
     participation_mode: s.participation_mode,
     signal_group_id: s.signal_group_id,
     first_party: s.first_party,
@@ -34,7 +36,8 @@ function draftOf(s: AdminSource): Draft {
 }
 
 export default function SourceDetail({ loaderData }: { loaderData: AdminSourceDetail }) {
-  const { source: s, runs, items, stats, history } = loaderData;
+  const { source: s, runs, items, stats, history, useLabels } = loaderData;
+  const selectionClassLabels = loaderData.selectionClassLabels ?? {};
   const { run, pending } = useAdminAction();
   const navigate = useNavigate();
   const sourcePath = useSourcePath();
@@ -93,6 +96,7 @@ export default function SourceDetail({ loaderData }: { loaderData: AdminSourceDe
         <span className="flex flex-wrap items-center gap-2">
           {s.name}
           <Badge>{KIND_LABEL[s.kind] ?? s.kind}</Badge>
+          {s.uses.map((u) => <Badge key={u} tone="info">{useLabels[u] ?? u}</Badge>)}
           <Badge tone={s.participation_mode === "editorial" ? "accent" : "muted"}>{MODE_LABEL[s.participation_mode]}</Badge>
         </span>
       }
@@ -106,7 +110,7 @@ export default function SourceDetail({ loaderData }: { loaderData: AdminSourceDe
               const p = patch();
               if (!p) return;
               const r = changes && (REPLACEABLE_SOURCE_KINDS as readonly string[]).includes(draft.kind)
-                ? await run<AdminSourcePreview>("POST", "/api/admin/sources/preview", { id: s.id, kind: draft.kind, config: p.config ?? s.config, participation_mode: draft.participation_mode }, { label: "preview", revalidate: false })
+                ? await run<AdminSourcePreview>("POST", "/api/admin/sources/preview", { id: s.id, kind: draft.kind, config: p.config ?? s.config, participation_mode: draft.participation_mode, uses: draft.uses }, { label: "preview", revalidate: false })
                 : await run<AdminSourcePreview>("POST", `${base}/preview`, {}, { label: "preview", revalidate: false });
               if (r) setPreview(r);
             }}
@@ -179,9 +183,32 @@ export default function SourceDetail({ loaderData }: { loaderData: AdminSourceDe
                   {Object.entries(MODE_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                 </Select>
               </Field>
+              {Object.keys(useLabels).length > 0 && (
+                <Field label="其他用途">
+                  <div className="flex flex-wrap gap-x-4 gap-y-2 pt-1.5 text-[13px] text-ink-2">
+                    {Object.entries(useLabels).map(([u, label]) => (
+                      <label key={u} className="inline-flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          className="size-4 accent-[var(--accent)]"
+                          checked={draft.uses.includes(u)}
+                          onChange={(e) => setDraft({ ...draft, uses: Object.keys(useLabels).filter((k) => (k === u ? e.target.checked : draft.uses.includes(k))) })}
+                        />
+                        {label}
+                      </label>
+                    ))}
+                  </div>
+                </Field>
+              )}
               <Field label="等级" hint="仅 T1 为一手信源">
                 <Select value={draft.tier} onChange={(e) => setDraft({ ...draft, tier: e.target.value })}>
                   {Object.entries(TIER_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                </Select>
+              </Field>
+              <Field label="类别" hint="抬高精选门槛，一手身份不变">
+                <Select value={draft.selection_class ?? ""} onChange={(e) => setDraft({ ...draft, selection_class: e.target.value || null })}>
+                  <option value="">无（按等级）</option>
+                  {Object.entries(selectionClassLabels).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                 </Select>
               </Field>
               <Field label="讨论分组 ID" hint="同一机构的多个账号共用，热度只算一次">

@@ -1,3 +1,4 @@
+import { industryPath } from "@aihot/industry/paths";
 // Phones: the article's own bottom toolbar in place of the tab bar — 收藏,
 // 目录 for long reads (components/ui/OutlineSheet), 分享 and 原文 — sliding away while reading down and
 // back on the way up or at the end; and the sheet of the article's further actions.
@@ -42,7 +43,7 @@ function useReadingDown(): boolean {
 function Tool({ icon, label, onClick, href, pressed }: { icon: ReactNode; label: string; onClick?: () => void; href?: string; pressed?: boolean }) {
   const cls = `flex flex-col items-center justify-center gap-[2px] text-[10.5px] transition-colors active:opacity-50 disabled:opacity-40 ${pressed ? "font-semibold text-accent" : "text-ink-3"}`;
   return href ? (
-    <a href={href} target="_blank" rel="noopener noreferrer" className={cls}>
+    <a href={industryPath(href)} target="_blank" rel="noopener noreferrer" className={cls}>
       {icon}
       {label}
     </a>
@@ -107,7 +108,7 @@ export function ActionsSheet({ open, onClose, rows }: { open: boolean; onClose: 
         {rows.map((r) => (
           <li key={r.key}>
             {r.href ? (
-              <a href={r.href} download={r.download} onClick={onClose} className={row}>
+              <a href={industryPath(r.href)} download={r.download} onClick={onClose} className={row}>
                 <span className="text-ink-3">{r.icon}</span>
                 {r.label}
               </a>

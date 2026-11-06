@@ -2,7 +2,7 @@ import { industryPath } from "@aihot/industry/paths";
 import { SOURCE_DEFAULTS } from "@aihot/site";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router";
-import type { AdminSourceCreated, AdminSourcePreview } from "@aihot/contracts/admin";
+import type { AdminSourceCreated, AdminSourcePreview, AdminSources } from "@aihot/contracts/admin";
 import { useAdminAction } from "./action";
 import { bj } from "./format";
 import { KIND_LABEL, MODE_LABEL, TIER_LABEL } from "./labels";
@@ -21,17 +21,18 @@ const TEMPLATES: Record<string, Record<string, unknown>> = {
 
 
 
-export default function NewSource() {
+export default function NewSource({ loaderData }: { loaderData: AdminSources }) {
+  const selectionClassLabels = loaderData.selectionClassLabels ?? {};
   const navigate = useNavigate();
   const sourcePath = useSourcePath();
   const { run, pending } = useAdminAction();
-  const [form, setForm] = useState({ id: "", name: "", kind: "rss", tier: "T2", participation_mode: "editorial", interval_minutes: 30, first_party: false, site_fulltext: SOURCE_DEFAULTS.siteFulltext, syndicate_fulltext: false, tags: "" });
+  const [form, setForm] = useState({ id: "", name: "", kind: "rss", tier: "T2", selection_class: "", participation_mode: "editorial", interval_minutes: 30, first_party: false, site_fulltext: SOURCE_DEFAULTS.siteFulltext, syndicate_fulltext: false, tags: "" });
   const [config, setConfig] = useState(JSON.stringify(TEMPLATES.rss, null, 2));
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<AdminSourcePreview | null>(null);
   const [duplicate, setDuplicate] = useState<{ id: string; name: string } | null>(null);
 
-  const clearDirty = useSourceDraftGuard(!!form.id || !!form.name || form.kind !== "rss" || form.tier !== "T2" || form.participation_mode !== "editorial" || form.interval_minutes !== 30 || form.site_fulltext !== SOURCE_DEFAULTS.siteFulltext || form.syndicate_fulltext || !!form.tags || config !== JSON.stringify(TEMPLATES.rss, null, 2));
+  const clearDirty = useSourceDraftGuard(!!form.id || !!form.name || form.kind !== "rss" || form.tier !== "T2" || !!form.selection_class || form.participation_mode !== "editorial" || form.interval_minutes !== 30 || form.site_fulltext !== SOURCE_DEFAULTS.siteFulltext || form.syndicate_fulltext || !!form.tags || config !== JSON.stringify(TEMPLATES.rss, null, 2));
 
   const parsed = () => {
     try {
@@ -77,6 +78,12 @@ export default function NewSource() {
             <Field label="等级" hint="仅 T1 为一手信源">
               <Select value={form.tier} onChange={(e) => setForm({ ...form, tier: e.target.value })}>
                 {Object.entries(TIER_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+              </Select>
+            </Field>
+            <Field label="类别" hint="抬高精选门槛，一手身份不变">
+              <Select value={form.selection_class} onChange={(e) => setForm({ ...form, selection_class: e.target.value })}>
+                <option value="">无（按等级）</option>
+                {Object.entries(selectionClassLabels).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
               </Select>
             </Field>
             <Field label="标签（逗号分隔）">
@@ -127,7 +134,7 @@ export default function NewSource() {
                 const r = await run<AdminSourceCreated>(
                   "POST",
                   "/api/admin/sources",
-                  { ...form, tags: form.tags.split(/[,，]/).map((t) => t.trim()).filter(Boolean), config: c },
+                  { ...form, selection_class: form.selection_class || null, tags: form.tags.split(/[,，]/).map((t) => t.trim()).filter(Boolean), config: c },
                   { label: "create", revalidate: false },
                 );
                 if (!r) return;

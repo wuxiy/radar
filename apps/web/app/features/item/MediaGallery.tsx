@@ -2,6 +2,7 @@ import { industryPath } from "@aihot/industry/paths";
 import { useState } from "react";
 import type { MediaView } from "@aihot/contracts/site";
 import { Lightbox } from "../../components/ui/Lightbox";
+import { Picture } from "../../components/ui/Picture";
 
 /** A round play mark over a video's still. */
 function PlayMark() {
@@ -31,8 +32,8 @@ export function MediaGallery({ media, postUrl }: { media: MediaView[]; postUrl: 
       <div className={`mt-5 grid gap-2 ${single ? "grid-cols-1" : shown.length === 2 || shown.length === 4 ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-3"}`}>
         {shown.map((m) => {
           const img = (
-            <img
-              src={industryPath(m.poster ?? m.url)}
+            <Picture
+              src={m.poster ?? m.url}
               srcSet={m.srcSet}
               sizes={single ? "auto, (min-width: 460px) 420px, calc(100vw - 32px)" : "auto, (min-width: 800px) 248px, (min-width: 640px) calc(33.333vw - 19px), calc(50vw - 24px)"}
               width={m.width ?? undefined}

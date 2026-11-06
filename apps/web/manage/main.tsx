@@ -133,7 +133,10 @@ const router = createBrowserRouter([{
       const { default: Sources } = await import("../app/features/admin/source-list");
       return { Component: () => <Sources loaderData={useLoaderData()} /> };
     }, ErrorBoundary: SourceError },
-    { path: "sources/new", lazy: async () => ({ Component: (await import("../app/features/admin/source-new")).default }), ErrorBoundary: SourceError },
+    { path: "sources/new", loader: ({ request }) => read(request, "/api/admin/sources"), lazy: async () => {
+      const { default: NewSource } = await import("../app/features/admin/source-new");
+      return { Component: () => <NewSource loaderData={useLoaderData()} /> };
+    }, ErrorBoundary: SourceError },
     { path: "sources/:id", loader: ({ request, params }) => read(request, `/api/admin/sources/${encodeURIComponent(params.id!)}`),
       lazy: async () => {
         const { default: Source } = await import("../app/features/admin/source-detail");

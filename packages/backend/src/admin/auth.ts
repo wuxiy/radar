@@ -3,6 +3,7 @@ import { sourceManagementReturn } from "@aihot/contracts/source-management";
 // union_ids / emails, or native OIDC with an explicit administrator mapping; opaque sessions stored hashed.
 // Development may impersonate an admin with DEV_AUTH_ROLE=admin; production refuses to start with it.
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+import { safeReturn as safeLocalReturn, SIGN_IN_HOME } from "@aihot/contracts/admin";
 import { audit } from "../audit.ts";
 import { config, credential } from "../config.ts";
 import { sql, type Db } from "../db.ts";
@@ -107,6 +108,7 @@ export function parseCookies(header: string | undefined): Record<string, string>
   return out;
 }
 
+/** A browser extension can call the admin API with the session cookie: after changing these attributes, check it still can. */
 export function cookie(name: string, value: string, maxAgeSeconds: number, secure: boolean): string {
   return `${name}=${encodeURIComponent(value)}; Path=${PROFILE.basePath || "/"}; HttpOnly; SameSite=Lax; Max-Age=${maxAgeSeconds}${secure ? "; Secure" : ""}`;
 }
@@ -120,24 +122,20 @@ export function loginRedirect(returnTo: string): { url: string; stateCookie: str
   return { url, stateCookie: sign(state) };
 }
 
-/** Only admin paths on this site; anything else (other hosts, protocol-relative) falls back to /admin. */
+/** Limit sign-in returns to this industry's admin and its unified source-management paths. */
 export function safeReturn(target: string): string {
   let path = target;
-  // A proxy's login redirect may pass the whole original URL; keep only its path and query.
   if (/^https?:\/\//i.test(path)) {
-    try {
-      const u = new URL(path);
-      path = `${u.pathname}${u.search}`;
-    } catch {
-      return "/admin";
-    }
+    try { const url = new URL(path); path = `${url.pathname}${url.search}`; }
+    catch { return SIGN_IN_HOME; }
   }
   path = localPath(path);
   if (PROFILE.basePath) {
     const management = sourceManagementReturn(path, PROFILE.id);
-    if (management) return management;
+    if (management && management.length <= 2000) return management;
   }
-  return /^\/admin(\/|\?|$)/.test(path) && !path.startsWith("//") ? path : "/admin";
+  const safe = safeLocalReturn(path);
+  return /^\/admin(?:\/|\?|$)/.test(safe) ? safe : SIGN_IN_HOME;
 }
 
 interface FeishuUser {
@@ -190,7 +188,8 @@ export async function completeLogin(code: string, state: string, stateCookie: st
   const expected = unsign(stateCookie);
   const given = unsign(state);
   if (!expected || !given || expected !== given) throw new LoginRejected("登录状态已失效，请重新登录");
-  const returnTo = given.split("|")[1] ?? "/admin";
+  // What follows the random part is the path (safeReturn, signed), which may itself hold a "|".
+  const returnTo = given.includes("|") ? given.slice(given.indexOf("|") + 1) : SIGN_IN_HOME;
   const { user: u, appId } = await feishuUser(code);
   const emailClaim = u.enterprise_email ?? u.email;
   const email = typeof emailClaim === "string" ? emailClaim.toLowerCase() || null : null;

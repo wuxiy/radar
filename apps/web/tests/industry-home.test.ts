@@ -5,6 +5,7 @@ import { createServer } from "node:http";
 import { once } from "node:events";
 import { after, before, test } from "node:test";
 import { UNSAFE_decodeViaTurboStream } from "react-router";
+import { chromium, expect } from "@playwright/test";
 import { createGateway } from "../../../deploy/radar/gateway.ts";
 import { startWebServer, type WebServer } from "./web-server.ts";
 
@@ -77,6 +78,8 @@ test("signed-in industry login preserves unified management and scoped admin des
       [`/manage/sources?industry=${other}`, `/${industry}/admin`],
       ["//outside.invalid/admin", `/${industry}/admin`],
       ["/administrator", `/${industry}/admin`],
+      [`/manage/sources?industry=${industry}&note=${"x".repeat(2100)}`, `/${industry}/admin`],
+      [`/admin/../manage/sources?industry=${industry}`, `/${industry}/admin`],
     ];
     for (const [target, expected] of targets) {
       const response = await fetch(`${origin}/${industry}/admin/login?return=${encodeURIComponent(target)}`, { headers: { cookie }, redirect: "manual" });
@@ -93,4 +96,31 @@ test("signed-in industry login preserves unified management and scoped admin des
     assert.match(html, /统一身份登录/);
     assert.ok(html.includes(`/manage/sources?industry=${industry}`), "the sign-in form retains the intended management destination");
   }
+});
+
+
+test("industry switch and unread preference stay independent on narrow and wide desktops", async () => {
+  const browser = await chromium.launch({ channel: "chromium" });
+  try {
+    for (const width of [800, 1440]) {
+      const context = await browser.newContext({ viewport: { width, height: 900 } });
+      try {
+        const page = await context.newPage();
+        await page.goto(`${origin}/medical`);
+        await page.waitForFunction(() => (globalThis as { __reactRouterDataRouter?: { state: { initialized: boolean } } }).__reactRouterDataRouter?.state.initialized);
+        const toggle = page.getByRole("button", { name: "只看未读" });
+        await expect(toggle).toHaveAttribute("aria-pressed", "false");
+        await toggle.click();
+        await expect(toggle).toHaveAttribute("aria-pressed", "true");
+        const visibleSwitch = page.getByRole("navigation", { name: "行业切换" }).filter({ visible: true });
+        await visibleSwitch.getByRole("link", { name: "AI", exact: true }).click();
+        await page.waitForURL(`${origin}/ai`);
+        await page.waitForFunction(() => (globalThis as { __reactRouterDataRouter?: { state: { initialized: boolean } } }).__reactRouterDataRouter?.state.initialized);
+        await expect(page.getByRole("button", { name: "只看未读" })).toHaveAttribute("aria-pressed", "false");
+        await page.getByRole("navigation", { name: "行业切换" }).filter({ visible: true }).getByRole("link", { name: "医疗", exact: true }).click();
+        await page.waitForURL(`${origin}/medical`);
+        await expect(page.getByRole("button", { name: "只看未读" })).toHaveAttribute("aria-pressed", "true");
+      } finally { await context.close(); }
+    }
+  } finally { await browser.close(); }
 });

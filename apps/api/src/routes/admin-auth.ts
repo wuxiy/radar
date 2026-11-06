@@ -2,7 +2,7 @@ import { industryPath } from "@aihot/industry/paths";
 // Admin sign-in and the /api/admin guard. Public routes never read the session.
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { ZodError } from "zod";
-import type { AdminMe } from "@aihot/contracts/admin";
+import { SIGN_IN_HOME, type AdminMe } from "@aihot/contracts/admin";
 import { DEPLOYMENT, SITE } from "@aihot/site";
 import { config } from "@aihot/backend/config";
 import {
@@ -25,7 +25,7 @@ import {
 import { OIDC_COOKIE, OIDC_TTL_SECONDS, oidcFlow, OidcUnavailable } from "@aihot/backend/admin/oidc";
 import { sendProblem } from "../http/respond.ts";
 
-/** Cookies are Secure whenever the site is served over HTTPS. */
+/** Match the configured public origin until the trusted proxy protocol chain is verified. */
 const secure = () => config.siteUrl.startsWith("https://");
 
 /**
@@ -76,25 +76,23 @@ export function adminHandler(fn: AdminHandler) {
 }
 
 /** Feishu sign-in: the state cookie, then Feishu's authorization page. */
-function feishuRedirect(reply: FastifyReply, returnTo: string) {
+function feishuRedirect(req: FastifyRequest, reply: FastifyReply, returnTo: string) {
   const { url, stateCookie } = loginRedirect(returnTo);
   reply.header("Set-Cookie", cookie(STATE_COOKIE, stateCookie, 600, secure())).header("Cache-Control", "no-store");
   return reply.redirect(url, 302);
 }
 
 export function registerAdminAuth(app: FastifyInstance) {
-  // The web admin sends a signed-out visitor here with ?return=, a reverse proxy with the site's header.
+  // The web admin sends a signed-out visitor here with ?return=.
   // With Feishu as the only way in, sign-in starts there at once; otherwise the sign-in page (in the web
   // app) offers the ways in.
   app.get("/api/auth/login", async (req, reply) => {
-    const returnTo = String(
-      (req.query as Record<string, string>).return
+    const returnTo = String((req.query as Record<string, string>).return
       ?? (DEPLOYMENT.loginReturnHeader ? req.headers[DEPLOYMENT.loginReturnHeader.toLowerCase()] : undefined)
-      ?? "/admin",
-    );
+      ?? SIGN_IN_HOME);
     // A live session does not need signing in again: go straight to where the visitor was headed.
     if (await sessionPrincipal(req.headers.cookie)) return reply.header("Cache-Control", "no-store").redirect(safeReturn(returnTo), 302);
-    if (feishuLoginConfigured() && !config.adminPassword && !oidcFlow) return feishuRedirect(reply, returnTo);
+    if (feishuLoginConfigured() && !config.adminPassword && !oidcFlow) return feishuRedirect(req, reply, returnTo);
     return reply.header("Cache-Control", "no-store").redirect(loginPage(returnTo), 302);
   });
 
@@ -137,7 +135,7 @@ export function registerAdminAuth(app: FastifyInstance) {
     });
     form.post("/api/auth/password", async (req, reply) => {
       const b = (req.body ?? {}) as Record<string, string>;
-      const returnTo = String(b.return ?? "/admin");
+      const returnTo = String(b.return ?? SIGN_IN_HOME);
       reply.header("Cache-Control", "no-store");
       if (tooManyAttempts(String(req.ip))) return reply.redirect(loginPage(returnTo, "too-many"), 303);
       try {
@@ -159,9 +157,9 @@ export function registerAdminAuth(app: FastifyInstance) {
 
   // Feishu sign-in (FEISHU_LOGIN_APP_ID / FEISHU_LOGIN_APP_SECRET and an allowlist), from the sign-in page.
   app.get("/api/auth/feishu", async (req, reply) => {
-    const returnTo = String((req.query as Record<string, string>).return ?? "/admin");
+    const returnTo = String((req.query as Record<string, string>).return ?? SIGN_IN_HOME);
     if (!feishuLoginConfigured()) return reply.header("Cache-Control", "no-store").redirect(loginPage(returnTo), 302);
-    return feishuRedirect(reply, returnTo);
+    return feishuRedirect(req, reply, returnTo);
   });
 
   // The callback registered in the Feishu open platform: the state cookie comes back here.
@@ -179,8 +177,7 @@ export function registerAdminAuth(app: FastifyInstance) {
     }
   });
 
-  // For a reverse proxy that guards /admin itself (auth_request): 204 with a live session, else 401.
-  // Only the session cookie counts here, never the development stand-in.
+  // Reverse proxies can verify the actual industry session without accepting a development stand-in.
   app.get("/api/auth/check", async (req, reply) => {
     reply.header("Cache-Control", "no-store");
     const admin = await sessionPrincipal(req.headers.cookie);

@@ -10,6 +10,7 @@ const namespace = PROFILE.id === "medical" ? "radar-medical" : "aihot";
 export const KEYS = {
   starred: `${namespace}-starred-items`,
   read: `${namespace}-read-items`,
+  unreadOnly: `${namespace}-unread-only`,
   theme: "aihot-theme",
   font: "aihot-font",
   changelogSeen: `${namespace}-changelog-seen-version`,
@@ -96,6 +97,7 @@ function emit(key?: string) {
 function onStorage(event: StorageEvent) {
   if (event.storageArea && event.storageArea !== storage("local")) return;
   if (event.key === null || event.key === KEYS.font) unsavedFont = undefined;
+  if (event.key === null || event.key === KEYS.unreadOnly) unsavedUnreadOnly = undefined;
   if (event.key === null) cache.clear();
   else cache.delete(event.key);
   // Clear the snapshot once, before notifying all cards. Each key is parsed at most once.
@@ -116,6 +118,7 @@ function subscribeKey(key: string) {
 }
 const subscribeStarred = subscribeKey(KEYS.starred);
 const subscribeRead = subscribeKey(KEYS.read);
+const subscribeUnreadOnly = subscribeKey(KEYS.unreadOnly);
 const subscribeTheme = subscribeKey(KEYS.theme);
 const subscribeFont = subscribeKey(KEYS.font);
 const subscribeChangelog = subscribeKey(KEYS.changelogSeen);
@@ -234,6 +237,19 @@ export function markRead(id: string) {
     writeRaw(KEYS.read, JSON.stringify(next));
     invalidate(KEYS.read);
   });
+}
+
+// Keep a reader's filter choice independently of a particular list's saved scroll position.
+let unsavedUnreadOnly: boolean | undefined;
+function getUnreadOnly(): boolean {
+  return unsavedUnreadOnly ?? (readRaw(KEYS.unreadOnly) === "true");
+}
+export function setUnreadOnly(value: boolean) {
+  unsavedUnreadOnly = writeRaw(KEYS.unreadOnly, value ? "true" : null) ? undefined : value;
+  emit(KEYS.unreadOnly);
+}
+export function useUnreadOnly(): boolean {
+  return useSyncExternalStore(subscribeUnreadOnly, getUnreadOnly, () => false);
 }
 
 // appearance
